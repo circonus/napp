@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# 14 * 2^8 is about the number of seconds in an hour
+STUTTER=`openssl rand 1 | od -I | awk '/0000000/ {print 14*$2}'`
+sleep $STUTTER
+
+TMPCRL=/opt/napp/etc/ssl/ca.$$.crl
+CRL=/opt/napp/etc/ssl/ca.crl
+
+curl -s -o $TMPCRL http://s.circonus.com/pki/ca.crl
+openssl crl -CAfile /opt/napp/etc/ssl/ca.crt -text -in $TMPCRL >/dev/null 2>&1 
+if [ $? -eq 0 ]; then
+	if [ ! -e $CRL ] || ! cmp -s "$TMPCRL" "$CRL"; then
+		ln -f $TMPCRL $CRL
+	fi
+fi
+
+rm -f $TMPCRL

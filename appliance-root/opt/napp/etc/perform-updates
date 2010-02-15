@@ -1,0 +1,8 @@
+#!/bin/sh
+
+NOW=`date +%Y%m%d%H%M%S`
+if [ -e /opt/napp/etc/doupdates ]; then
+	mv /opt/napp/etc/doupdates /opt/napp/etc/doingupdates
+	yum -y update 2>&1 > /opt/napp/etc/updatelogs/$NOW.log
+        rm /opt/napp/etc/doingupdates
+fi

@@ -1,0 +1,3 @@
+* * * * * root /opt/napp/etc/issue-refresh > /dev/null 2>&1
+0 * * * * root /opt/napp/etc/crl-refresh > /dev/null 2>&1
+* * * * * root /opt/napp/etc/perform-updates > /dev/null 2>&1

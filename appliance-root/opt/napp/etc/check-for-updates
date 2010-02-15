@@ -1,0 +1,3 @@
+#!/bin/sh
+
+yum check-update -q | grep .

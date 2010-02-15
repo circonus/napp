@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+  <head>
+    <style type="text/css">
+      #step_2, #step_3
+      {
+          display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="login_form" method="POST">
+      <fieldset id="step_1" class="first_step">
+	<label for="login_email">Email</label>
+	<input id="login_email" type="text" name="email" />
+	<label for="login_password">Password</label>
+	<input id="login_passord" type="password" name="password" />
+      </fieldset>
+      <fieldset id="step_2">
+	<select name="account">
+	</select>
+      </fieldset>
+      <fieldset id="step_3" class="last_step">
+      </fieldset>
+      <input type="submit" value="Login">
+    </form>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.0/jquery.min.js"
+	    type="text/javascript"></script>
+    <script type="text/javascript">
+      jQuery(function ($)
+      {
+          var $form = $("#login_form"),
+              $email = $form.find("#login_email"),
+              $pass = $form.find("[type=password]"),
+              $submit = $form.find("[type=submit]"),
+              $step1 = $form.find("#step_1"),
+              $step2 = $form.find("#step_2"),
+              $account = $step2.find("[name=account]");
+              $step3 = $form.find("#step_3"),
+              accounts = {};
+
+          $form.bind("submit", step2);
+
+          function step2(e)
+          { 
+              e.preventDefault(); // stop submission
+              $submit.val("Next");
+
+              // make XHR call
+              $.ajax({
+                  url: "/api/json/list_accounts",
+                  type: "POST",
+                  data: { email: $email.val(), password: $pass.val() },
+                  dataType: "json",
+                  success: function (data, status, request)
+                  {
+                      $form.unbind("submit", step2).bind("submit", step3);
+
+                      // create / draw select box
+                      $account.empty();
+                      $.each(data, function (i, acct)
+                      {
+                          var $option = $("<option>")
+	                          .attr({
+	                              value: acct.account,
+	                              text: acct.account_name + " ("+ acct.account +")"
+                                  });
+                          $account.append($option); 
+
+	                  // store by id to access later
+	                  accounts[acct.account] = acct;
+                      });
+
+                      $step2.show();
+
+                  },
+                  error: function (request, status, error)
+                  {
+	              console.log("error", arguments);
+                  }
+              });
+          }
+
+	  function step3(e)
+	  {
+	      e.preventDefault();
+	      
+	      // get radios
+	      $step3.empty();
+	      $.ajax({ 
+	          url: "/api/json/list_private_agents",
+	          type: "POST",
+	          dataType: "json",
+	          data: {
+	              email: $email.val(), 
+	              password: $pass.val(), 
+	              account: $account.val()
+                  },
+	          success: function (data, status, request)
+	          {
+                      $form.unbind("submit", step3).bind("submit", step4);
+	              $.each(data, function (i, agent)
+	              {
+	                  var input_id = "agent_" + agent.agent_name.replace(/\W+/g, "_"),
+	                      $label = $("<label>")
+	                          .attr({"for": input_id})
+	                          .text(agent.agent_name),
+	                      $radio = $("<input>")
+	                          .attr({
+	                              type: "radio",
+	                              name: "cn",
+	                              id: input_id,
+	                              value: agent.cn
+	                          });
+	                  $step3.append($radio).append($label).show();
+	              });
+	          },
+	          error: function (request, status, error)
+	          {
+	              console.log("error", arguments);
+	          }
+	      });
+	     
+	  }
+
+	  function step4(e)
+	  {
+	      var id = $account.val(),
+	          hidden_vals = ["country_code", "state_prov", "account_name"];
+
+	      $form.unbind('submit', step4);
+
+	      $.each(hidden_vals, function (i, hide)
+	      {
+	          var $hidden = $("<input>")
+	                  .attr({
+                              type: "hidden",
+	                      name: hide,
+                              value: accounts[id][hide] ?
+                                         accounts[id][hide] : '??'
+                          });
+
+	          $form.append($hidden);
+	      });
+
+	  }
+      });
+
+    </script>
+  </body>
+</html>
