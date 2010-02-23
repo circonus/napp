@@ -1,5 +1,5 @@
 
-module fo 1.14;
+module napp 1.14;
 
 require {
 	type httpd_t;
