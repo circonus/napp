@@ -1,0 +1,21 @@
+
+module fo 1.14;
+
+require {
+	type httpd_t;
+	type etc_t;
+	type rpm_exec_t;
+	type rpm_var_lib_t;
+	type var_t;
+	class file { read write create unlink rename execute execute_no_trans getattr ioctl lock };
+	class dir { search getattr write remove_name add_name };
+}
+
+#============= httpd_t ==============
+allow httpd_t rpm_exec_t:file { read getattr execute execute_no_trans ioctl };
+allow httpd_t etc_t:dir { write remove_name add_name };
+allow httpd_t etc_t:file { write create unlink rename execute execute_no_trans };
+allow httpd_t rpm_var_lib_t:dir { getattr search };
+allow httpd_t rpm_var_lib_t:file { getattr read lock };
+allow httpd_t var_t:file { read getattr };
+
