@@ -1,0 +1,31 @@
+#!/usr/bin/python
+
+import os
+import time
+
+def main():
+
+    pid = os.fork()
+    if (pid != 0):
+        os._exit(0)
+    os.setsid()
+    pid = os.fork()
+    if (pid != 0):
+        os._exit(0)
+
+    noit_on = False
+    while True:
+        if os.path.isfile('/opt/napp/etc/noit.run'):
+            if not noit_on:
+                print("starting noitd")
+                os.system("/etc/rc.d/init.d/noitd start")
+                noit_on = True
+        else:
+            if noit_on:
+                print("stopping noitd")
+                os.system("/etc/rc.d/init.d/noitd stop")
+                noit_on = False
+        time.sleep(2)
+
+if __name__ == "__main__":
+    main()
