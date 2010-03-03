@@ -137,3 +137,15 @@ def json_check_for_updates(request):
     s = Settings()
     pkgs = s.check_for_updates()
     return HttpResponse(json.dumps(pkgs), content_type='text/javascript')
+
+@login_required
+def json_update_logs(request):
+    s = Settings()
+    logs = s.update_logs()
+    return HttpResponse(json.dumps(logs), content_type='text/javascript')
+
+@login_required
+def json_update_log_contents(request):
+    s = Settings()
+    contents = s.update_log_contents(request.GET['log'])
+    return HttpResponse(contents, content_type='text/plain')

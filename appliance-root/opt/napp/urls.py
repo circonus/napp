@@ -16,6 +16,8 @@ urlpatterns = patterns('',
     (r'^api/json/list_accounts$', 'napp.base.views.list_accounts'),
     (r'^api/json/list_private_agents$', 'napp.base.views.list_private_agents'),
     (r'^api/json/check_for_updates$', 'napp.base.views.json_check_for_updates'),
+    (r'^api/json/update_logs$', 'napp.base.views.json_update_logs'),
+    (r'^api/json/update_log_contents$', 'napp.base.views.json_update_log_contents'),
 
     # Uncomment the admin/doc line below and add 'django.contrib.admindocs' 
     # to INSTALLED_APPS to enable admin documentation:

@@ -5,6 +5,8 @@ import urllib
 from urlparse import urlparse
 from django.utils import simplejson
 
+API_BASE_URL = 'https://circonus.com/api/json'
+
 class Noit:
     def __init__(self, host='s.circonus.com'):
         # We have to use the httpsclient here as it supports client certs
@@ -18,7 +20,7 @@ class Noit:
         return (r.status, r.read())
 
 class API:
-    def __init__(self, base='https://circonus.com/api/json'):
+    def __init__(self, base=API_BASE_URL):
         self.base = base
         o = urlparse(base)
         host = o[1].split(':')

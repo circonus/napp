@@ -76,7 +76,23 @@ class Settings:
                     pkgs.append({ 'name': parts[0],
                                   'version': parts[1],
                                   'source': parts[2]})
-        return pkgs
+        status = 'idle'
+        if os.path.isfile('/opt/napp/etc/doupdates'):
+            status = 'requested'
+        elif os.path.isfile('/opt/napp/etc/doingupdates'):
+            status = 'processing'
+        return { 'status': status, 'packages': pkgs }
+
+    def update_logs(self):
+        return os.listdir('/opt/napp/etc/updatelogs')
+
+    def update_log_contents(self, file):
+        if re.search('/', file):
+            return ''
+        f = open('/opt/napp/etc/updatelogs/' + file)
+        rv = f.read()
+        f.close()
+        return rv
 
     def fetch_cert(self):
         f = open(self.ssl_path + '/ssl_subj.txt', 'r')

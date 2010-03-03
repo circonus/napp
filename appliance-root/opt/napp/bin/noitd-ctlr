@@ -1,9 +1,36 @@
 #!/usr/bin/python
+#
+# chkconfig: 345 25 75
+# description: A daemon that starts and stops noitd by file presense
 
-import os
-import time
 
-def main():
+import sys, os, fcntl, time, struct
+
+def set_initial_state():
+    f = open('/opt/napp/etc/noit.run', 'w')
+    f.close()
+    
+
+def main(cmd):
+
+    if cmd == 'start':
+        print('Starting...')
+    elif cmd == 'stop':
+        if not os.path.isfile('/var/run/noitd-ctrl.lock'):
+            print('not running...')
+            os._exit(-1)
+        try:
+            lock = open('/var/run/noitd-ctrl.lock', 'r')
+            pid = lock.read()
+            lock.close()
+            os.kill(int(pid), 3)
+            os.unlink('/var/run/noitd-ctrl.lock')
+            os._exit(0)
+        except IOError:
+            os._exit(-1)
+    else:
+        print('%s not understood' % (cmd))
+        os._exit(-1)
 
     pid = os.fork()
     if (pid != 0):
@@ -13,7 +40,17 @@ def main():
     if (pid != 0):
         os._exit(0)
 
-    noit_on = False
+    lock = os.open('/var/run/noitd-ctrl.lock', os.O_RDWR | os.O_CREAT)
+    lockdata = struct.pack('hhllhh', fcntl.F_WRLCK, 0, 0, 0, 0, 0)
+    try:
+        rv = fcntl.fcntl(lock, fcntl.F_SETLK, lockdata)
+    except IOError:
+        print("Already running...")
+        os._exit(-1)
+    os.write(lock, "%d" % (os.getpid()))
+
+    noit_on = set_initial_state()
+
     while True:
         if os.path.isfile('/opt/napp/etc/noit.run'):
             if not noit_on:
@@ -28,4 +65,4 @@ def main():
         time.sleep(2)
 
 if __name__ == "__main__":
-    main()
+    main((lambda x:sys.argv[1], lambda x:'command')[len(sys.argv) != 2](0))
