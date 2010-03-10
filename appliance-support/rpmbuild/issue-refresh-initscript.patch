@@ -1,0 +1,17 @@
+--- circonus-napp-0.1r3711/opt/napp/bin/issue-refresh.orig	2010-03-10 10:58:23.000000000 -0500
++++ circonus-napp-0.1r3711/opt/napp/bin/issue-refresh	2010-03-10 10:59:41.000000000 -0500
+@@ -1,4 +1,13 @@
+-#!/bin/sh
++#!/bin/bash
++#
++# issue-refresh 
++#
++# chkconfig: 345 11 89
++# description: first run of issue-refresh should be immediately after network up
++#	       and before the console opens
++# processname: ip
++# config: /etc/issue
++
+ IP=`/sbin/ip addr show dev eth0 | /bin/awk '{if($1=="inet"){print $2;}}'`
+ if [ -z "$IP" ]; then
+ 	IP="(no address assigned)"
