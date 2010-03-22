@@ -10,6 +10,7 @@
 	    <span class="app-logo"> <a href="http://circonus.com/" title="Circonus Home"> <img id="logo" alt="Circonus: Performance Monitoring &mdash; Revolutionized." src="/i/present/app-logo.png"> </a></span>
 	  </div>
 	</div>
+	<div class="page">
 	<div id="page-content" class="clear">
 	{% if form.errors %}
 	<p>Your username and password didn't match. Please try again.</p>
@@ -29,6 +30,7 @@
 		<input type="submit" value="login" />
 		<input type="hidden" name="next" value="{{ next }}" />
 	</form>
+	</div>
 	</div>
 </body>
 </html>
