@@ -31,7 +31,7 @@ cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.2
+%define		rrelease	0.3
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
@@ -110,10 +110,8 @@ if [ \$1 = 1 ]; then
   /sbin/service noitd-ctlr start
   /sbin/service napp-httpd start
   /sbin/service issue-refresh start
-  semodule -i /opt/napp/selinux/napp.pp
-else
-  semodule -u /opt/napp/selinux/napp.pp
 fi
+semodule -i /opt/napp/selinux/napp.pp
 
 
 %preun
@@ -149,7 +147,8 @@ fi
 %attr(0755,nobody,root) %dir /opt/napp/etc/django-stuff
 %attr(0755,nobody,root) %dir /opt/napp/etc/ssl
 %attr(0755,nobody,root) %dir /opt/napp/etc/updatelogs
-%attr(0644,nobody,root) /opt/napp/etc/django-stuff/*
+%attr(0644,nobody,root) /opt/napp/etc/django-stuff/napp_stub.sqlite.factory
+%config(noreplace) %attr(0644,nobody,root) /opt/napp/etc/django-stuff/napp_stub.sqlite
 %attr(0644,nobody,root) /opt/napp/etc/httpd.conf
 %attr(0644,nobody,root) /opt/napp/etc/napp-openssl.cnf
 %dir /opt/napp/base
@@ -173,6 +172,9 @@ fi
 
 
 %changelog
+* Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3999-0.3
+- semodule -u can't update to the same version, -i works.
+  /opt/napp/etc/django-stuff/napp_stub.sqlite should be preserved if touched by user
 * Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.2
 - Set selinux context etc_t for everything under /opt/noit/etc/
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
