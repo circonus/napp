@@ -31,7 +31,7 @@ cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.4
+%define		rrelease	0.1
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
@@ -172,8 +172,8 @@ fi
 
 
 %changelog
-* Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3999-0.4
-- fix install path for crontab
+* Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4005-0.1
+- svn changes and fix install path for crontab
 * Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3999-0.3
 - semodule -u can't update to the same version, -i works.
   /opt/napp/etc/django-stuff/napp_stub.sqlite should be preserved if touched by user
