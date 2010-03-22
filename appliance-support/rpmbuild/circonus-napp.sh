@@ -98,6 +98,10 @@ rm -rf %{name}-%{rversion}
 rm -rf \$RPM_BUILD_ROOT
 
 
+%pre
+/usr/sbin/semanage fcontext -a -t etc_t "/opt/napp/etc/.*"
+
+
 %post
 if [ \$1 = 1 ]; then
   /sbin/chkconfig --add noitd-ctlr
@@ -121,6 +125,13 @@ if [ \$1 = 0 ]; then
   /sbin/service napp-httpd stop
   semodule -r napp
 fi
+
+
+%postun
+if [ \$1 = 0 ]; then
+  /usr/sbin/semanage fcontext -d -t etc_t "/opt/napp/etc/.*"
+fi
+
 
 %files
 %defattr(-,root,root,-)
