@@ -1,5 +1,260 @@
 <html>
-<body>
-You are logged in... {{ user.username }}
-</body>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link href="/c/s.css" rel="stylesheet" media="screen" type="text/css" />
+    <link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
+        <style type="text/css">
+            #updates_panel { display: none; } /* hidden by default */
+            #agent_state { display: none; } /* hidden by default */
+            #logs_panel { display: none; } /* hidden by default */
+        </style>    
+  </head>
+  <body class="enterprise">
+    <div id="masthead">
+      <div id="header">
+        <span class="app-logo"><a href="http://circonus.com/" title="Circonus Home"><img id="logo" alt="Circonus: Performance Monitoring &mdash; Revolutionized." src="/i/present/app-logo.png"></a></span>
+      </div>
+    </div>
+    <div id="page-content" class="clear">
+      <div class="content-col">
+        <p>You are logged in... {{ user.username }}</p>
+        <button id="agent_state"></button>
+        <p id="updates_panel">
+            <p id="updates_message"></p>
+        </p>
+        <p id="logs_panel">
+        </p>
+        <script src="/js/jquery.min.js" type="text/javascript"></script>
+        <script>
+jQuery(function ()
+{
+    var available_updates = 0,
+        polling_interval = 1000 * 10,
+        polling = false,
+        $updates_section = $('#updates_panel'),
+        $updates_message = $('#updates_message'),
+        $logs_section = $('#logs_panel'),
+        $state_button = $('#agent_state'),
+        updates_status,
+        UPDATES_DONE = "idle",
+        agent_state,
+        AGENT_ON = "running",
+        AGENT_OFF = "stopped",
+        urls = {
+            agent_state: "/api/json/agent_state",
+            available_updates: "/api/json/check_for_updates",
+            update_status: "/api/json/check_for_updates",
+            perform_updates: "/perform-updates",
+            list_logs: "/api/json/update_logs",
+            get_log: "/api/json/update_log_contents"
+        }
+    ;
+
+    /* Main */
+    getAgentState();
+    checkForUpdates(showUpdateList);
+    getLogs();
+
+    /* page functions */
+    function getAgentState()
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'json',
+            url: urls.agent_state,
+            success: function (data)
+            {
+                agent_state = data.state;
+                updateAgentButton();
+                $state_button.show();
+            }
+        })
+    }
+
+    function updateAgentButton()
+    {
+        var text;
+        if (AGENT_OFF === agent_state){
+            text = 'Turn On';
+        } else if (AGENT_ON === agent_state) {
+            text = 'Turn Off';
+        } else {
+            $state_button.hide();
+        }
+
+        $state_button
+            .text(text)
+            .unbind('click')
+            .bind('click', toggleAgentState);
+    }
+
+    function toggleAgentState()
+    {
+        var new_state = (AGENT_ON === agent_state) ? AGENT_OFF : AGENT_ON;
+        
+        $.ajax({
+            type: 'post',
+            dataType: 'json',
+            data: {newstate: new_state},
+            url: urls.agent_state,
+            success: function (data)
+            {
+                agent_state = data.state;
+                updateAgentButton();
+            }
+        })
+    }
+
+    function checkForUpdates(cb)
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'json',
+            url: urls.available_updates,
+            success: function (data)
+            {
+                if (data.packages){
+                    available_updates = data.packages.length;
+                    if (cb) cb(data.packages);
+                }
+                if (data.status){
+                    updates_status = data.status;
+                    setUpdatesMessage();
+                }
+            }
+        });
+    }
+
+    function setUpdatesMessage()
+    {
+        if (UPDATES_DONE === updates_status){
+            if (available_updates){
+                $updates_message.text("Updates are available");
+            } else {
+                $updates_message.text("No updates are available");
+            }
+        }
+        else {
+            $updates_message.text("Updates in progress");
+        }
+    }
+
+    function showUpdateList(packages)
+    {
+        if (! packages.length) return;
+
+        var $button = $('<button id="perform_updates">Perform updates</button>'),
+            $list = $('<ul id="updates">'),
+            items = [],
+            item
+        ;
+
+        $.each(packages, function (ndx, package)
+        {
+            item = [
+                '<li class="package">',
+                    '<span class="package-source">', package.source, '</span>',
+                    '<span class="package-version">', package.version, '</span>',
+                    '<span class="package-name">', package.name, '</span>',
+                '</li>'
+            ].join('');
+
+            items.push(item)
+        });
+
+        $list.append(items.join(''));
+        $updates_section
+            .append($list)
+            .append($button.bind('click', performUpdates))
+            .show();
+        
+    }
+    
+    function performUpdates(e)
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'html',
+            url: urls.perform_updates,
+            success: function (data)
+            {
+                polling = setInterval(updatesProgress, polling_interval);
+            }
+        });
+
+    }
+
+    function updatesProgress()
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'json',
+            url: urls.update_status,
+            success: function (data)
+            {
+                if (UPDATES_DONE === data.status){
+                    getLogs();
+                }
+            }
+        });
+    }
+
+    function getLogs()
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'json',
+            url: urls.list_logs,
+            success: function (data)
+            {
+                showLogList(data);
+            }
+        });
+    }
+
+    function showLogList(logs)
+    {
+        var $list = $('<ul id="logs">'),
+            items = [],
+            item
+        ;
+
+        $.each(logs, function (ndx, log)
+        {
+            item = [
+                '<li class="log">',
+                    '<span id="', log, '" class="action">', log, '</span>',
+                '</li>'
+            ].join('');
+
+            items.push(item);
+        });
+
+        $list.append(items.join(''));
+        $logs_section.append($list).show();
+        $list.find('li').bind('click', function (e){
+            e.preventDefault();
+            showLog(e.target.id)
+        });
+    }
+
+    function showLog(id)
+    {
+        $.ajax({
+            type: 'get',
+            dataType: 'text',
+            url: urls.get_log,
+            data: {log: id},
+            success: function (log_text)
+            {
+                $updates_section
+                    .after('<pre>'+ log_text +'</pre>');
+            }
+        });
+    }
+});
+        </script>
+     </div>
+     </div>
+    </body>
 </html>

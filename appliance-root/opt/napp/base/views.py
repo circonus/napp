@@ -149,3 +149,19 @@ def json_update_log_contents(request):
     s = Settings()
     contents = s.update_log_contents(request.GET['log'])
     return HttpResponse(contents, content_type='text/plain')
+
+@login_required
+def json_agent_state(request):
+    s = Settings()
+    if 'newstate' in request.POST:
+        if request.POST['newstate'] == "running":
+            s.start_noitd()
+        elif request.POST['newstate'] == "stopped":
+            s.stop_noitd()
+        else:
+            return HttpResponse(json.dumps({ 'error': 'unknown state requested' }), content_type='text/javascript')
+    state = 'stopped'
+    if s.current_noitd_state():
+        state = 'running'
+    return HttpResponse(json.dumps({ 'state': state }), content_type='text/javascript')
+ 

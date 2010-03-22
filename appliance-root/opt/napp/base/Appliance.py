@@ -58,6 +58,16 @@ class Settings:
         self.has_csr = os.path.isfile(self.ssl_path + '/appliance.csr')
         return self.has_csr
 
+    def current_noitd_state(self):
+        return os.path.isfile('/opt/napp/etc/noit.run')
+
+    def start_noitd(self):
+        open('/opt/napp/etc/noit.run', 'w').close()
+
+    def stop_noitd(self):
+        if os.path.isfile('/opt/napp/etc/noit.run'):
+            os.unlink('/opt/napp/etc/noit.run')
+
     def perform_updates(self):
         p = open("/opt/napp/etc/doupdates", "w")
         p.close()
