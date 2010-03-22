@@ -12,13 +12,13 @@
         </div>
         <div class="page">
         <div id="page-content" class="clear">
-            {% if error %}
-                <p class="error">{{ error }}</p>
-            {% endif %}
-            <div id="userlogin">
+             <div id="userlogin">
                 <h2 class="form-head">Set Initial Password</h2>
                 <form class="sign-in" action="" method="post">
                     {{ form.as_p }}
+                     {% if error %}
+               			 <p class="error">{{ error }}</p>
+            		 {% endif %}
                     <input type="submit" value="Submit &raquo;" />
                 </form>
             </div>	
