@@ -167,7 +167,7 @@ fi
 /etc/rc.d/init.d/noitd-ctlr
 /etc/rc.d/init.d/napp-httpd
 /etc/rc.d/init.d/issue-refresh
-/etc/cron.d/cron.d/napp
+/etc/cron.d/napp
 /opt/napp/selinux/napp.pp
 
 
