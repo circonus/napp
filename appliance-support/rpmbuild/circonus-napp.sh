@@ -164,6 +164,7 @@ fi
 /opt/napp/*.py*
 /opt/napp/napp.wsgi
 /opt/napp/stub
+/opt/napp/etc/ssl/ca.crt
 /etc/rc.d/init.d/noitd-ctlr
 /etc/rc.d/init.d/napp-httpd
 /etc/rc.d/init.d/issue-refresh
