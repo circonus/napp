@@ -90,7 +90,7 @@ jQuery(function ($)
                         // if we have it, use it
                         ($no_agents_test.length && $no_agents_test)
                         // else create, add and hide
-                        || $('<p id="no-available-agents">No available agents</p>').hide();
+                        || $('<p id="no-available-agents">Sorry, there are no available Enterprise Agents for this account.  Please select another account or <a href="#">add a new Enterprise Agent</a> to this account.</p>').hide();
 
                 $list.empty().after($no_agents_msg);
                 $.each(data, function (i, agent)
@@ -99,7 +99,7 @@ jQuery(function ($)
                         $item = $("<li>").addClass(agent.status),
                         $label = $("<label>")
                             .attr({"for": input_id})
-                            .html("<em>"+agent.agent_name +'</em> ('+ agent.cn +')' ),
+                            .html('<em>'+agent.agent_name +'</em> ('+ agent.cn +') <span><em>'+ agent.status +'</em></span>' ),
                         $radio = $("<input>")
                             .attr({
                                 type: "radio",
