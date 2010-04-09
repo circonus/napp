@@ -55,7 +55,7 @@ Requires(preun): chkconfig, sed
 Requires(preun): initscripts
 # for /bin/rm
 Requires(preun): coreutils
-Requires:	mod_wsgi, circonus-noit-modules_prod, noit_prod, python-sqlite2
+Requires:	mod_wsgi, circonus-noit-modules_prod, noit_prod, python-sqlite2, curl, httpd
 
 
 %description
@@ -173,6 +173,8 @@ fi
 
 
 %changelog
+* Fri Apr 09 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4340-0.1
+- added requirements for httpd and curl
 * Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4005-0.1
 - svn changes and fix install path for crontab
 * Mon Mar 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3999-0.3
