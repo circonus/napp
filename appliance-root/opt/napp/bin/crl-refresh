@@ -1,7 +1,12 @@
 #!/bin/sh
 
-# 14 * 2^8 is about the number of seconds in an hour
-STUTTER=`openssl rand 1 | od -I | awk '/0000000/ {print 14*$2}'`
+if [ -n $1 ] && [ "$1" == "0" ]; then
+	STUTTER=0
+else
+	# 14 * 2^8 is about the number of seconds in an hour
+	STUTTER=`openssl rand 1 | od -I | awk '/0000000/ {print 14*$2}'`
+fi
+
 sleep $STUTTER
 
 TMPCRL=/opt/napp/etc/ssl/ca.$$.crl
