@@ -99,7 +99,7 @@ rm -rf \$RPM_BUILD_ROOT
 
 
 %pre
-/usr/sbin/semanage fcontext -a -t etc_t "/opt/napp/etc/.*"
+/usr/sbin/semanage fcontext -a -t etc_t "/opt/napp/etc"
 
 
 %post
@@ -127,7 +127,7 @@ fi
 
 %postun
 if [ \$1 = 0 ]; then
-  /usr/sbin/semanage fcontext -d -t etc_t "/opt/napp/etc/.*"
+  /usr/sbin/semanage fcontext -d -t etc_t "/opt/napp/etc"
 fi
 
 
