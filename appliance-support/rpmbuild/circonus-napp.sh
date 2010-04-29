@@ -99,7 +99,7 @@ rm -rf \$RPM_BUILD_ROOT
 
 
 %pre
-/usr/sbin/semanage fcontext -a -t etc_t "/opt/napp/etc"
+/usr/sbin/semanage fcontext -a -t etc_t '/opt/napp/etc(/.*)?'
 
 
 %post
@@ -174,7 +174,7 @@ fi
 
 
 %changelog
-* Wed Apr 21 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.2
+* Thu Apr 29 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.2
 - added restorecon call in postinstall script; applied fcontext to /opt/napp/etc
 * Fri Apr 09 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4340-0.1
 - added requirements for httpd and curl
