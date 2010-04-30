@@ -31,7 +31,7 @@ cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.2
+%define		rrelease	0.3
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
@@ -174,6 +174,8 @@ fi
 
 
 %changelog
+* Thu Apr 29 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.3
+- fix fcontext pattern: '/opt/napp/etc(/.*)?'
 * Thu Apr 29 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.2
 - added restorecon call in postinstall script; applied fcontext to /opt/napp/etc
 * Fri Apr 09 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4340-0.1
