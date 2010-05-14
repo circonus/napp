@@ -7,6 +7,7 @@
             #updates_panel { display: none; } /* hidden by default */
             #agent_state { display: none; } /* hidden by default */
             #logs_panel { display: none; } /* hidden by default */
+            pre { font-family: courier; }
         </style>    
   </head>
   <body class="enterprise">
@@ -20,9 +21,9 @@
       <div class="content-col">
         <p>You are logged in... {{ user.username }}</p>
         <button id="agent_state"></button>
-        <p id="updates_panel">
+        <div id="updates_panel">
             <p id="updates_message"></p>
-        </p>
+        </div>
         <p id="logs_panel">
         </p>
         <script src="/js/jquery.min.js" type="text/javascript"></script>
@@ -222,9 +223,10 @@ jQuery(function ()
 
         $.each(logs, function (ndx, log)
         {
+	    var id = 'show_' + extractLogNum( log );
             item = [
                 '<li class="log">',
-                    '<span id="', log, '" class="action">', log, '</span>',
+                    '<span id="', id, '" class="action">', log, '</span>',
                 '</li>'
             ].join('');
 
@@ -233,25 +235,37 @@ jQuery(function ()
 
         $list.append(items.join(''));
         $logs_section.append($list).show();
-        $list.find('li').bind('click', function (e){
+        $list.find('li').bind('click', function (e)
+	{
+	    var num  = extractLogNum( e.target.id ),
+		log  = num +'.log',
+		id   = 'log_'+ num,
+		$out = $('#'+id);
+
             e.preventDefault();
-            showLog(e.target.id)
+	    $out.length ? $out.toggle() : getLog(log);
         });
     }
 
-    function showLog(id)
+    function getLog(log)
     {
+	var id = 'log_' + extractLogNum(log);
         $.ajax({
             type: 'get',
             dataType: 'text',
             url: urls.get_log,
-            data: {log: id},
+            data: {log: log},
             success: function (log_text)
             {
-                $updates_section
-                    .after('<pre>'+ log_text +'</pre>');
+                $logs_section
+                    .after('<pre id="'+ id +'">'+ log_text +'</pre>');
             }
         });
+    }
+
+    function extractLogNum( val )
+    {
+	return parseInt( val.match(/(\d+)/)[1], 10 );
     }
 });
         </script>
