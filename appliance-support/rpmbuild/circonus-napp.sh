@@ -17,21 +17,21 @@ SRCFILE=${TOPDIR}/SOURCES/${NAME}-${VERSION}.tar.gz
 SPECFILE=${TOPDIR}/SPECS/${NAME}.spec
 if ! test -f ${SRCFILE}; then 
  rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} \
- && svn co -q -r ${REV} $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
+ && svn export -q $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRCFILE} ${NAME}-${VERSION})
 fi
 NAME2=circonus-selinux-module
 SRC2FILE=${TOPDIR}/SOURCES/${NAME2}-${VERSION2}.tar.gz
 if ! test -f ${SRC2FILE}; then 
  rm -rf ${TOPDIR}/BUILD/${NAME2} \
- && svn co -q -r ${REV2} $URL2 ${TOPDIR}/BUILD/${NAME2} \
+ && svn export -q $URL2 ${TOPDIR}/BUILD/${NAME2} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRC2FILE} ${NAME2})
 fi
 cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.3
+%define		rrelease	0.4
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
