@@ -15,18 +15,14 @@ NAME=circonus-napp
 TOPDIR=$(rpm -E %{_topdir})
 SRCFILE=${TOPDIR}/SOURCES/${NAME}-${VERSION}.tar.gz
 SPECFILE=${TOPDIR}/SPECS/${NAME}.spec
-if ! test -f ${SRCFILE}; then 
- rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} \
+rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} ${SRCFILE} \
  && svn export -q $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRCFILE} ${NAME}-${VERSION})
-fi
 NAME2=circonus-selinux-module
 SRC2FILE=${TOPDIR}/SOURCES/${NAME2}-${VERSION2}.tar.gz
-if ! test -f ${SRC2FILE}; then 
- rm -rf ${TOPDIR}/BUILD/${NAME2} \
+rm -rf ${TOPDIR}/BUILD/${NAME2} ${SRC2FILE} \
  && svn export -q $URL2 ${TOPDIR}/BUILD/${NAME2} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRC2FILE} ${NAME2})
-fi
 cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
@@ -107,8 +103,11 @@ if [ \$1 = 1 ]; then
   /sbin/chkconfig --add noitd-ctlr
   /sbin/chkconfig --add napp-httpd
   /sbin/chkconfig --add issue-refresh
-  /sbin/service noitd-ctlr start
-  /sbin/service napp-httpd start
+  if test -f /-f /opt/napp/etc/noit.run; then 
+     /sbin/service noitd-ctlr stop
+     /sbin/service noitd-ctlr start
+  fi
+  /sbin/service napp-httpd condstart
   /sbin/service issue-refresh start
 fi
 semodule -i /opt/napp/selinux/napp.pp
@@ -175,6 +174,9 @@ fi
 
 
 %changelog
+* Thu Jun 3 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5079-0.1
+- tid12581, condrestart after install/upgrade;
+  don't rely on source revision number due to potential changes in external repos
 * Thu Apr 29 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.3
 - fix fcontext pattern: '/opt/napp/etc(/.*)?'
 * Thu Apr 29 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r4807-0.2
