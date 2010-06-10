@@ -12,8 +12,6 @@ def set_initial_state():
         f.close()
         return True
     else:
-        if os.path.isfile('/opt/napp/etc/noit.run'):
-            os.unlink('/opt/napp/etc/noit.run')
         return False
     
 
