@@ -27,7 +27,7 @@ cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.1
+%define		rrelease	0.2
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
@@ -51,7 +51,7 @@ Requires(preun): chkconfig, sed
 Requires(preun): initscripts
 # for /bin/rm
 Requires(preun): coreutils
-Requires:	mod_wsgi, circonus-noit-modules_prod, noit_prod, python-sqlite2, curl, httpd
+Requires:	mod_wsgi, noit_prod, python-sqlite2, curl, httpd
 
 
 %description
@@ -174,6 +174,8 @@ fi
 
 
 %changelog
+* Tue Jul 27 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5470-0.2
+- removed requires to circonus-noit-modules as obsolete
 * Thu Jun 3 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5079-0.1
 - tid12581, condrestart after install/upgrade;
   don't rely on source revision number due to potential changes in external repos
