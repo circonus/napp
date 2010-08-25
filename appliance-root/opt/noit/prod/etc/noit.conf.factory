@@ -7,53 +7,7 @@
     </config>
   </eventer>
   <logs>
-    <log name="logfile" type="file" path="/var/log/noitd.log"/>
-    <console_output>
-      <outlet name="stderr"/>
-      <outlet name="logfile"/>
-      <log name="error"/>
-      <log name="debug" disabled="true"/>
-    </console_output>
-    <feeds>
-      <log name="feed" type="jlog" path="/var/log/noitd.feed(stratcon.circonus.net)"/>
-    </feeds>
-    <components>
-      <error>
-        <outlet name="error"/>
-        <log name="error/collectd"/>
-        <log name="error/dns"/>
-        <log name="error/eventer"/>
-        <log name="error/external"/>
-        <log name="error/lua"/>
-        <log name="error/mysql"/>
-        <log name="error/ping_icmp"/>
-        <log name="error/postgres"/>
-        <log name="error/selfcheck"/>
-        <log name="error/snmp"/>
-        <log name="error/ssh2"/>
-      </error>
-      <debug>
-        <outlet name="debug"/>
-        <log name="debug/collectd" disabled="true"/>
-        <log name="debug/dns" disabled="true"/>
-        <log name="debug/eventer" disabled="true"/>
-        <log name="debug/external" disabled="true"/>
-        <log name="debug/lua" disabled="true"/>
-        <log name="debug/mysql" disabled="true"/>
-        <log name="debug/ping_icmp" disabled="true"/>
-        <log name="debug/postgres" disabled="true"/>
-        <log name="debug/selfcheck" disabled="true"/>
-        <log name="debug/snmp" disabled="true"/>
-        <log name="debug/ssh2" disabled="true"/>
-      </debug>
-    </components>
-    <feeds>
-      <outlet name="feed"/>
-      <log name="check"/>
-      <log name="status"/>
-      <log name="metrics"/>
-      <log name="config"/>
-    </feeds>
+    <include file="circonus-logs.conf"/>
   </logs>
   <modules directory="/opt/noit/prod/libexec/noit">
     <loader image="lua" name="lua">
@@ -64,51 +18,17 @@
     <include file="circonus-modules.conf"/>
   </modules>
   <listeners>
-    <sslconfig>
-      <optional_no_ca>false</optional_no_ca>
-      <certificate_file>/opt/napp/etc/ssl/appliance.crt</certificate_file>
-      <key_file>/opt/napp/etc/ssl/appliance.key</key_file>
-      <ca_chain>/opt/napp/etc/ssl/ca.crt</ca_chain>
-    </sslconfig>
-    <consoles type="noit_console">
-      <listener address="/tmp/noit">
-        <config>
-          <line_protocol>telnet</line_protocol>
-        </config>
-      </listener>
-      <listener address="*" port="32322">
-        <config>
-          <line_protocol>telnet</line_protocol>
-        </config>
-      </listener>
-      <listener address="*" port="32323" ssl="on"/>
-    </consoles>
-    <listener type="control_dispatch" address="*" port="43191" ssl="on">
-      <config>
-        <log_transit_feed_name>feed</log_transit_feed_name>
-      </config>
-    </listener>
+    <include file="circonus-listeners.conf"/>
   </listeners>
   <checks max_initial_stutter="60000" filterset="default">
   </checks>
   <filtersets>
-    <filterset name="default">
-      <rule type="deny" module="^ping_icmp$" metric="^(?:minimum|maximum|count)$"/>
-    </filterset>
-    <filterset name="ptronly">
-      <rule type="allow" module="^dns$" metric="^answer$"/>
-      <rule type="deny" module="^dns$" metric="^.+$"/>
-    </filterset>
-    <filterset name="allowall">
-      <rule type="allow" metric="^.+$"/>
-    </filterset>
+    <include file="circonus-filtersets.conf"/>
   </filtersets>
   <config_templates>
     <include file="config_templates.conf"/>
   </config_templates>
   <rest>
-    <acl type="deny">
-      <rule type="allow" cn="^(?:web\d+\.int|admin\d*\.int|strat\d+|stratcon)\.circonus\.net$"/>
-    </acl>
+    <include file="circonus-rest.conf"/>
   </rest>
 </noit>
