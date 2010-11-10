@@ -17,6 +17,8 @@ class Settings:
 	self.has_keys = os.path.isfile(self.ssl_path + '/appliance.key')
         self.has_csr = os.path.isfile(self.ssl_path + '/appliance.csr')
         self.has_cert = os.path.isfile(self.ssl_path + '/appliance.crt')
+        self.openssl_bin = ['/usr/bin/openssl', '/usr/sfw/bin/openssl',
+            '/usr/local/bin/openssl']
 
     def make_keys(self):
         if self.has_keys:
@@ -33,7 +35,13 @@ class Settings:
         f = open(self.ssl_path + '/ssl_subj.txt', 'w')
         f.write(subj)
         f.close()
-        p = subprocess.Popen(['/usr/bin/openssl',
+        for sslpath in self.openssl_bin:
+            if os.path.exists(sslpath):
+                break
+        else:
+            raise Exception("Can't find openssl")
+
+        p = subprocess.Popen([sslpath,
                               'req', '-key', self.ssl_path + '/appliance.key',
                               '-days', '365', '-new',
                               '-out', self.ssl_path + '/appliance.csr~',
