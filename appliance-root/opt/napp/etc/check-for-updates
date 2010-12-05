@@ -1,3 +1,10 @@
 #!/bin/sh
 
-yum check-update -q | grep .
+case `uname` in
+	SunOS)	/opt/napp/bin/sol11-canupdate.sh
+		;;
+
+	*)	yum check-update -q | grep .
+		;;
+esac
+
