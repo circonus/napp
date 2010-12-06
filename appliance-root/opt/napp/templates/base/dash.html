@@ -263,14 +263,12 @@ jQuery(function ()
             url: urls.available_updates,
             success: function (data)
             {
-                if (data.packages){
-                    available_updates = data.packages.length;
-                    if (cb) cb(data.packages);
-                }
+                if (data.packages) available_updates = data.packages.length;
                 if (data.status){
                     updates_status = data.status;
                     setUpdatesMessage();
                 }
+                if (data.packages) if (cb) cb(data.packages);
             }
         });
     }
