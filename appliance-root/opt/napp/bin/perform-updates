@@ -1,8 +1,18 @@
 #!/bin/sh
 
 NOW=`date +%Y%m%d%H%M%S`
-if [ -e /opt/napp/etc/doupdates ]; then
+LOG=/opt/napp/etc/updatelogs/$NOW.log
+
+if [ -r /opt/napp/etc/doupdates ]; then
 	mv /opt/napp/etc/doupdates /opt/napp/etc/doingupdates
-	yum -y update 2>&1 > /opt/napp/etc/updatelogs/$NOW.log
-        rm /opt/napp/etc/doingupdates
+
+	case `uname` in
+		SunOS)	/opt/napp/bin/sol11-update.sh 2>&1 > $LOG
+			;;
+
+		*)	yum -y update 2>&1 > $LOG
+			;;
+	esac
+
+	rm /opt/napp/etc/doingupdates
 fi
