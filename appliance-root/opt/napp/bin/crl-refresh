@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ -n $1 ] && [ "$1" == "0" ]; then
+if [ -n "$1" ] && [ "$1" = "0" ]; then
 	STUTTER=0
 else
 	# 14 * 2^8 is about the number of seconds in an hour
@@ -15,7 +15,8 @@ CRL=/opt/napp/etc/ssl/ca.crl
 curl -s -o $TMPCRL http://s.circonus.com/pki/ca.crl
 openssl crl -CAfile /opt/napp/etc/ssl/ca.crt -text -in $TMPCRL >/dev/null 2>&1 
 if [ $? -eq 0 ]; then
-	if [ ! -e $CRL ] || ! cmp -s "$TMPCRL" "$CRL"; then
+	cmp -s "$TMPCRL" "$CRL"
+	if [ ! -r $CRL -o $? -ne 0 ]; then
 		ln -f $TMPCRL $CRL
 	fi
 fi
