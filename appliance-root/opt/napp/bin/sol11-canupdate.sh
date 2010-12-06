@@ -1,6 +1,8 @@
 #!/bin/sh
 
-CURL=curl
+CURL=/opt/omni/bin/curl
+test -x $CURL || CURL=/opt/local/bin/curl
+test -x $CURL || CURL=curl
 for i in /opt/omni/bin /opt/local/bin
 do
 	if [ -x "$i/curl" ]; then

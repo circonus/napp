@@ -1,6 +1,8 @@
 #!/bin/sh
 
-CURL=curl
+CURL=/opt/omni/bin/curl
+test -x $CURL || CURL=/opt/local/bin/curl
+test -x $CURL || CURL=curl
 BASE=http://updates.circonus.com/joyent/5.11
 UPDATES_AVAILABLE=0
 
@@ -16,11 +18,11 @@ handle_packages() {
 			UPDATES_AVAILABLE=1
 			if [ -n "$cver" ]; then
 				echo "removing $pkg"
-				yes | pkgrm $pkg
+				yes | /usr/sbin/pkgrm $pkg
 			fi
 			if [ -n "$ver" ]; then
 				echo "adding $pkg from $file"
-				yes | pkgadd -d $BASE/$file all
+				yes | /usr/sbin/pkgadd -d $BASE/$file all
 			fi
 		fi
 	done
