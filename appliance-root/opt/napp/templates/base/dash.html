@@ -10,12 +10,12 @@
             pre { 
             	font-family: courier;
             	background-color:#F8F8F8;
-				border-color:#E7E8E8;
-				border-style:solid;
-				border-width:0 2px 2px;
-				font-size:0.6875em;
-				margin-top:0;
-				padding:14px; 
+		border-color:#E7E8E8;
+		border-style:solid;
+		border-width:0 2px 2px;
+		font-size:0.6875em;
+		margin-top:0;
+		padding:14px; 
             }
             
             .enterprise .content-col.narrow{
@@ -23,20 +23,23 @@
             }
             h4.prefs-head{
             	font-family:"Trebuchet MS","Lucida Sans Unicode","Lucida Grande","Lucida Sans",Arial,sans-serif;
-				font-style:normal;
-				font-weight:400;
-				text-transform:uppercase;
-				border-bottom:2px solid #E7E8E8;
-				margin-bottom:2px;
-				padding-bottom:8px;
-				color:#9FA3A5;
-			}
+		font-style:normal;
+		font-weight:400;
+		text-transform:uppercase;
+		border-bottom:2px solid #E7E8E8;
+		margin-bottom:2px;
+		padding-bottom:8px;
+		color:#9FA3A5;
+           }
 			
 			#updates_panel li{
 				border-bottom:1px dashed #E7E8E8;
 				font-size:0.8125em;
 				padding:6px 0;
 			}
+			#updates_panel li span.package-source { visibility:hidden; }
+			#updates_panel li span.package-name { float:left; }
+			#updates_panel li span.package-version { float:right; }
 			
 			button#perform_updates {
 				background:url("../i/present/update-btn.png") no-repeat scroll 167px 5px #E7E8E8;
@@ -284,7 +287,7 @@ jQuery(function ()
             }
         }
         else {
-            $updates_message.text("Updates in progress");
+            $updates_message.text("Updates in progress...");
         }
     }
 
@@ -312,10 +315,10 @@ jQuery(function ()
         };
 
         $list.append(items.join(''));
-        $updates_section
-            .append($list)
-            .append($button.bind('click', performUpdates))
-            .show();
+        $updates_section.append($list);
+        if (UPDATES_DONE === updates_status)
+            $updates_section.append($button.bind('click', performUpdates));
+        $updates_section.show();
         
     }
     
