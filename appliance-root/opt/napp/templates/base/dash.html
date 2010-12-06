@@ -407,6 +407,7 @@ jQuery(function ()
     function getLog(log)
     {
 	var id = 'log_' + extractLogNum(log);
+        var $p = $('#show_' + extractLogNum(log)).parent();
         $.ajax({
             type: 'get',
             dataType: 'text',
@@ -414,7 +415,7 @@ jQuery(function ()
             data: {log: log},
             success: function (log_text)
             {
-                $logs_section
+                $p
                     .after('<pre id="'+ id +'">'+ log_text +'</pre>');
                     
             }
