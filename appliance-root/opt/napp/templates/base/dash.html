@@ -37,8 +37,6 @@
 				font-size:0.8125em;
 				padding:6px 0;
 			}
-			#updates_panel li span.package-source { visibility:hidden; }
-			#updates_panel li span.package-name { float:left; }
 			#updates_panel li span.package-version { float:right; }
 			
 			button#perform_updates {
@@ -305,7 +303,6 @@ jQuery(function ()
             package = packages[i];
             item = [
                 '<li class="package">',
-                    '<span class="package-source">', package.source, '</span>',
                     '<span class="package-version">', package.version, '</span>',
                     '<span class="package-name">', package.name, '</span>',
                 '</li>'
