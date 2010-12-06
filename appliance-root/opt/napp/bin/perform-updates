@@ -7,10 +7,10 @@ if [ -r /opt/napp/etc/doupdates ]; then
 	mv /opt/napp/etc/doupdates /opt/napp/etc/doingupdates
 
 	case `uname` in
-		SunOS)	/opt/napp/bin/sol11-update.sh 2>&1 > $LOG
+		SunOS)	/opt/napp/bin/sol11-update.sh > $LOG 2>&1
 			;;
 
-		*)	yum -y update 2>&1 > $LOG
+		*)	yum -y update > $LOG 2>&1
 			;;
 	esac
 
