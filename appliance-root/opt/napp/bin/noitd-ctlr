@@ -59,7 +59,7 @@ def main(cmd):
         os._exit(0)
 
     lock = os.open('/var/run/noitd-ctrl.lock', os.O_RDWR | os.O_CREAT)
-    if fcntl.F_SETLK64 == fcntl.F_SETLK64:
+    if fcntl.F_SETLK == fcntl.F_SETLK64:
         lockdata = struct.pack('hhqqlll', fcntl.F_WRLCK, 0, 0, 0, 0, 0, 0)
     else:
         lockdata = struct.pack('hhllhh', fcntl.F_WRLCK, 0, 0, 0, 0, 0)
