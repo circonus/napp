@@ -4,6 +4,7 @@ import re
 import os.path
 import time
 import subprocess
+import platform
 from M2Crypto import RSA, EVP
 from napp.base.Circonus import API
 from django.utils import simplejson as json
@@ -67,7 +68,14 @@ class Settings:
         return self.has_csr
 
     def current_noitd_state(self):
-        return os.path.isfile('/opt/napp/etc/noit.run')
+        if platform.system() == 'SunOS':
+       	    p = subprocess.Popen(['/usr/bin/svcs', '-H', '-o', 'state', 'noitd'],
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 close_fds=True)
+            (outdata, outerr) = p.communicate()
+            return outdata.rstrip() == 'online'
+        else:
+            return os.path.isfile('/opt/napp/etc/noit.run')
 
     def start_noitd(self):
         open('/opt/napp/etc/noit.run', 'w').close()
