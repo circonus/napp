@@ -28,6 +28,7 @@ handle_packages() {
 	done
 }
 
+noit_state=`/sur/bin/svcs -H -o state noitd`
 echo "Downloading package list."
 handle_packages `$CURL -s $BASE/ea.pkgs`
 
@@ -39,8 +40,7 @@ fi
 if [ "$UPDATES_AVAILABLE" = "0" ]; then
 	echo "No updates."
 else
-	/usr/sbin/svcadm restart jezebel
-	/usr/sbin/svcadm restart unbound
-	/usr/sbin/svcadm restart noitd
-	/usr/sbin/svcadm restart napp
+	if [ "$noit_state" = "online" ]; then
+		/usr/sbin/svcadm enable noitd
+	fi
 fi
