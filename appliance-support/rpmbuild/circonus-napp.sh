@@ -95,7 +95,9 @@ rm -rf \$RPM_BUILD_ROOT
 
 
 %pre
-/usr/sbin/semanage fcontext -a -t etc_t '/opt/napp/etc(/.*)?'
+if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
+  /usr/sbin/semanage fcontext -a -t etc_t '/opt/napp/etc(/.*)?'
+fi
 
 
 %post
@@ -110,8 +112,10 @@ if [ \$1 = 1 ]; then
   /sbin/service napp-httpd condstart
   /sbin/service issue-refresh start
 fi
-semodule -i /opt/napp/selinux/napp.pp
-restorecon -r /opt/napp/etc
+if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
+  semodule -i /opt/napp/selinux/napp.pp
+  restorecon -r /opt/napp/etc
+fi
 
 
 %preun
@@ -121,13 +125,17 @@ if [ \$1 = 0 ]; then
   /sbin/chkconfig --del issue-refresh
   /sbin/service noitd-ctlr stop
   /sbin/service napp-httpd stop
-  semodule -r napp
+  if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
+    semodule -r napp
+  fi
 fi
 
 
 %postun
 if [ \$1 = 0 ]; then
-  /usr/sbin/semanage fcontext -d -t etc_t "/opt/napp/etc"
+  if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
+    /usr/sbin/semanage fcontext -d -t etc_t "/opt/napp/etc"
+  fi
 fi
 
 
@@ -174,6 +182,8 @@ fi
 
 
 %changelog
+* Wed Dec 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r6841-0.1
+- fix scripts to work in case selinux disabled
 * Tue Jul 27 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5470-0.2
 - removed requires to circonus-noit-modules as obsolete
 * Thu Jun 3 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5079-0.1

@@ -1,5 +1,5 @@
---- circonus-napp-0.1r3711/opt/napp/bin/issue-refresh.orig	2010-03-10 10:58:23.000000000 -0500
-+++ circonus-napp-0.1r3711/opt/napp/bin/issue-refresh	2010-03-10 10:59:41.000000000 -0500
+--- circonus-napp-0.1r6841/opt/napp/bin/issue-refresh.orig	2010-12-06 15:08:08.000000000 +0000
++++ circonus-napp-0.1r6841/opt/napp/bin/issue-refresh	2010-12-22 18:12:04.000000000 +0000
 @@ -1,4 +1,13 @@
 -#!/bin/sh
 +#!/bin/bash
@@ -12,6 +12,6 @@
 +# processname: ip
 +# config: /etc/issue
 +
- IP=`/sbin/ip addr show dev eth0 | /bin/awk '{if($1=="inet"){print $2;}}'`
+ IP=`/sbin/ip addr show dev eth0 2>&1 | /bin/awk '{if($1=="inet"){print $2;}}'`
  if [ -z "$IP" ]; then
  	IP="(no address assigned)"
