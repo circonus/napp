@@ -105,7 +105,7 @@ if [ \$1 = 1 ]; then
   /sbin/chkconfig --add noitd-ctlr
   /sbin/chkconfig --add napp-httpd
   /sbin/chkconfig --add issue-refresh
-  if test -f /-f /opt/napp/etc/noit.run; then 
+  if test -f /opt/napp/etc/noit.run; then 
      /sbin/service noitd-ctlr stop
      /sbin/service noitd-ctlr start
   fi
