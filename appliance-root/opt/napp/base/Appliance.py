@@ -133,9 +133,26 @@ class Settings:
             if L[0] == 200:
                 obj = json.loads(L[1])
                 if obj['cert'] is not None and len(obj['cert']) > 0:
-                    crt = open(self.ssl_path + '/appliance.crt', 'w')
+                    if os.path.isfile(self.ssl_path + '/appliance.crt~'):
+                        os.unlink(self.ssl_path + '/appliance.crt~')
+                    crt = open(self.ssl_path + '/appliance.crt~', 'w')
                     crt.write(obj['cert'])
                     crt.close()
+                    olddata = ''
+                    if os.path.isfile(self.ssl_path + '/appliance.crt'):
+                        oldfile = open(self.ssl_path + '/appliance.crt', 'r')
+                        olddata = oldfile.read()
+                        oldfile.close()
+                    newfile = open(self.ssl_path + '/appliance.crt~', 'r')
+                    newdata = newfile.read()
+                    newfile.close();
+                    if olddata != newdata:
+                        if os.path.isfile(self.ssl_path + '/appliance.crt'):
+                            os.unlink(self.ssl_path + '/appliance.crt')
+                        os.rename(self.ssl_path + '/appliance.crt~',
+                                  self.ssl_path + '/appliance.crt')
+                    else:
+                        os.unlink(self.ssl_path + '/appliance.crt~')
                     self.has_cert = True
             else:
                 raise Exception('Internet Error: ' + subj)

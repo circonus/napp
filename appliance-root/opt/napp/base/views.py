@@ -51,6 +51,11 @@ def genkey(request):
     if s.make_keys():
         return HttpResponseRedirect('/dash')
 
+def refresh_cert(request):
+    s = Settings()
+    s.fetch_cert()
+    return HttpResponse('')
+
 @login_required
 def provision(request):
     s = Settings()
