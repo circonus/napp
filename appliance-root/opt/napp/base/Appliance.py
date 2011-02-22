@@ -165,7 +165,7 @@ class UserCreateForm(forms.Form):
     password_again = forms.CharField(widget=forms.PasswordInput(render_value=False), max_length=30)
 
 class ProvisionForm(forms.Form):
-    email = forms.CharField(max_length=30)
+    email = forms.CharField(max_length=75)
     password = forms.CharField(widget=forms.PasswordInput(render_value=False),
                                max_length=30)
     account = forms.CharField(max_length=60)
