@@ -6,7 +6,41 @@ test -x $CURL || CURL=curl
 BASE=http://updates.circonus.com/joyent/5.11
 UPDATES_AVAILABLE=0
 
+record_svc_state() {
+	STATE=`/usr/bin/svcs -H -o state $1`
+	if [ "$STATE" != "online" ]; then
+		STATE=offline
+	fi
+	eval "svc_state_$1=$STATE"
+}
+
+restore_svc_state() {
+	NEWSTATE=`/usr/bin/svcs -H -o state $1`
+	STATE=`eval echo "\$svc_state_$1"`
+	if [ "$STATE" = "online" ]; then
+		if [ "$NEWSTATE" = "online" ]; then
+			echo "svcadm restart $1 ($NEWSTATE -> $STATE)"
+			/usr/sbin/svcadm restart $1
+		elif [ "$NEWSTATE" = "maintenance" ]; then
+			echo "svcadm clear $1 ($NEWSTATE -> $STATE)"
+			/usr/sbin/svcadm clear $1
+		else
+			echo "svcadm enable $1 ($NEWSTATE -> $STATE)"
+			/usr/sbin/svcadm enable $1
+		fi
+	fi
+}
+
+web_init() {
+	if [ ! -r /opt/napp/etc/django-stuff/napp_stub.sqlite ]; then
+		echo "initializing web interface"
+		cp -p /opt/napp/etc/django-stuff/napp_stub.sqlite.factory \
+			/opt/napp/etc/django-stuff/napp_stub.sqlite
+	fi
+}
+
 handle_packages() {
+	echo "Downloading package list."
 	while [ -n "$*" ];
 	do
 		pkg=$1
@@ -28,19 +62,20 @@ handle_packages() {
 	done
 }
 
-noit_state=`/sur/bin/svcs -H -o state noitd`
-echo "Downloading package list."
+record_svc_state jezebel
+record_svc_state unbound
+record_svc_state noitd
+record_svc_state napp
+
 handle_packages `$CURL -s $BASE/ea.pkgs`
 
-if [ ! -r /opt/napp/etc/django-stuff/napp_stub.sqlite ]; then
-	echo "initializing web interface"
-	cp -p /opt/napp/etc/django-stuff/napp_stub.sqlite.factory \
-		/opt/napp/etc/django-stuff/napp_stub.sqlite
-fi
+web_init
+
 if [ "$UPDATES_AVAILABLE" = "0" ]; then
 	echo "No updates."
 else
-	if [ "$noit_state" = "online" ]; then
-		/usr/sbin/svcadm enable noitd
-	fi
+	restore_svc_state jezebel
+	restore_svc_state unbound
+	restore_svc_state noitd
+	restore_svc_state napp
 fi
