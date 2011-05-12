@@ -16,7 +16,7 @@ record_svc_state() {
 
 restore_svc_state() {
 	NEWSTATE=`/usr/bin/svcs -H -o state $1`
-	STATE=`eval echo "\$svc_state_$1"`
+	STATE=`eval echo '$svc_state_'$1`
 	if [ "$STATE" = "online" ]; then
 		if [ "$NEWSTATE" = "online" ]; then
 			echo "svcadm restart $1 ($NEWSTATE -> $STATE)"
