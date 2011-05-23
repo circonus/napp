@@ -79,7 +79,9 @@ rm -rf %{name}-%{rversion}
 %{__mkdir} \$RPM_BUILD_ROOT
 %{__cp} -pr opt \$RPM_BUILD_ROOT
 %{__mkdir_p} \$RPM_BUILD_ROOT/etc/cron.d
+%{__mkdir_p} \$RPM_BUILD_ROOT/etc/cron.daily
 %{__cp} -p etc/cron.d/napp \$RPM_BUILD_ROOT/etc/cron.d
+%{__ln_s} /opt/napp/bin/crt-refresh \$RPM_BUILD_ROOT/etc/cron.daily
 %{__mkdir_p} \$RPM_BUILD_ROOT%{_initrddir}
 %{__ln_s} /opt/napp/bin/issue-refresh \$RPM_BUILD_ROOT%{_initrddir}
 %{__ln_s} /opt/napp/bin/noitd-ctlr \$RPM_BUILD_ROOT%{_initrddir}
@@ -178,10 +180,13 @@ fi
 /etc/rc.d/init.d/napp-httpd
 /etc/rc.d/init.d/issue-refresh
 /etc/cron.d/napp
+/etc/cron.daily/crt-refresh
 /opt/napp/selinux/napp.pp
 
 
 %changelog
+* Mon May 23 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.1
+- link crt-refresh to /etc/cron.daily
 * Wed Dec 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r6841-0.1
 - fix scripts to work in case selinux disabled
 * Tue Jul 27 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r5470-0.2
