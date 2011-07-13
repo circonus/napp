@@ -69,7 +69,7 @@ cat <<EOF > ${TOPDIR}/SOURCES/${YUMREPO}
 [circonus]
 name=Circonus - Base
 gpgcheck=1
-baseurl=http://updates.circonus.com/circonus/$basearch/
+baseurl=http://updates.circonus.com/circonus/\$basearch/
 EOF
 rm -rf ${TOPDIR}/SOURCES/${GPGKEY} && curl -o ${TOPDIR}/SOURCES/${GPGKEY} ${URL}/${GPGKEY} 
 rpmbuild -ba --sign $SPECFILE
