@@ -27,7 +27,7 @@ cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
-%define		rrelease	0.1
+%define		rrelease	0.2
 Name:		circonus-napp
 Version:	%{rversion}
 Release:	%{rrelease}
@@ -111,7 +111,7 @@ if [ \$1 = 1 ]; then
      /sbin/service noitd-ctlr stop
      /sbin/service noitd-ctlr start
   fi
-  /sbin/service napp-httpd condstart
+  /sbin/service napp-httpd condrestart
   /sbin/service issue-refresh start
 fi
 if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
@@ -185,6 +185,8 @@ fi
 
 
 %changelog
+* Fri Aug 12 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.2
+- fix typo
 * Mon May 23 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.1
 - link crt-refresh to /etc/cron.daily
 * Wed Dec 22 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r6841-0.1
