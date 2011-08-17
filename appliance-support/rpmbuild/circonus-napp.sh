@@ -43,7 +43,7 @@ Source1:	$NAME2-$VERSION2.tar.gz
 Source2:	napp-httpd
 Patch1:		issue-refresh-initscript.patch
 
-BuildRequires:	rpm, coreutils
+BuildRequires:	rpm, coreutils, checkpolicy, policycoreutils
 Requires(pre):	chkconfig
 Requires(post): chkconfig
 Requires(preun): chkconfig, sed
@@ -212,4 +212,5 @@ fi
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
 - Initial package.
 EOF
-rpmbuild -ba $SPECFILE
+rpmbuild -bs  $SPECFILE 
+mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
