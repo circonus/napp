@@ -212,5 +212,6 @@ fi
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
 - Initial package.
 EOF
-rpmbuild -bs  $SPECFILE 
+rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" $SPECFILE 
 mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
+mock -r circonus-5-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
