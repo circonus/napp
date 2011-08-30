@@ -54,6 +54,11 @@ install -pm 644 %{SOURCE1} \
 %clean
 rm -rf \$RPM_BUILD_ROOT
 
+%post
+if [ \$1 = 1 ]; then
+  rpm --import /etc/pki/rpm-gpg/${GPGKEY}
+fi
+
 %files
 %defattr(-,root,root,-)
 %config(noreplace) /etc/yum.repos.d/*
