@@ -1,8 +1,9 @@
 #!/bin/sh
 REV=$1
 REV2=$2
-URL1="https://svn.omniti.com/raas/napp/appliance-root"
-URL2="https://svn.omniti.com/raas/napp/appliance-support"
+URL1="https://svn.omniti.com/__raas__/napp/appliance-root"
+URL2="https://svn.omniti.com/__raas__/napp/appliance-support"
+URL3="https://svn.omniti.com/__raas__/service/trunk/htdocs"
 if [ -z "$REV" ]; then
   REV=`svn info $URL1 | awk '/^Last Changed Rev:/{print $NF;}'`
 fi
@@ -16,7 +17,10 @@ TOPDIR=$(rpm -E %{_topdir})
 SRCFILE=${TOPDIR}/SOURCES/${NAME}-${VERSION}.tar.gz
 SPECFILE=${TOPDIR}/SPECS/${NAME}.spec
 rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} ${SRCFILE} \
- && svn export -q $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
+ && svn export --ignore-externals -q $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
+ && svn export --ignore-externals -q $URL3/c ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/c \
+ && svn export --ignore-externals -q $URL3/i ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/i \
+ && svn export --ignore-externals -q $URL3/s ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/s \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRCFILE} ${NAME}-${VERSION})
 NAME2=circonus-selinux-module
 SRC2FILE=${TOPDIR}/SOURCES/${NAME2}-${VERSION2}.tar.gz
@@ -214,4 +218,7 @@ fi
 EOF
 rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" $SPECFILE 
 mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
+cp /var/lib/mock/circonus-5-i386/result/circonus-5-i386/${NAME}-${VERSION}-0.2.i386.rpm /mnt/circonus/i386/RPMS/
 mock -r circonus-5-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
+cp /var/lib/mock/circonus-5-i386/result/circonus-5-x86_64/${NAME}-${VERSION}-0.2.x86_64.rpm /mnt/circonus/x86_64/RPMS/
+/mnt/make-repo-metadata /mnt/circonus/
