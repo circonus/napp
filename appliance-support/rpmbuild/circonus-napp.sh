@@ -218,7 +218,7 @@ fi
 EOF
 rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" $SPECFILE 
 mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-i386/result/circonus-5-i386/${NAME}-${VERSION}-0.2.i386.rpm /mnt/circonus/i386/RPMS/
+cp /var/lib/mock/circonus-5-i386/result/${NAME}-${VERSION}-0.2.i386.rpm /mnt/circonus/i386/RPMS/
 mock -r circonus-5-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-i386/result/circonus-5-x86_64/${NAME}-${VERSION}-0.2.x86_64.rpm /mnt/circonus/x86_64/RPMS/
+cp /var/lib/mock/circonus-5-x86_64/result/${NAME}-${VERSION}-0.2.x86_64.rpm /mnt/circonus/x86_64/RPMS/
 /mnt/make-repo-metadata /mnt/circonus/
