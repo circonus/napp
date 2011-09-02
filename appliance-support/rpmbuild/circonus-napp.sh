@@ -1,4 +1,12 @@
 #!/bin/sh
+# check permissions
+for i in `find /mnt/circonus/i386 -not -user mocker`; do
+   test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
+done
+for i in `find /mnt/circonus/x86_64 -not -user mocker`; do
+   test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
+done
+
 REV=$1
 REV2=$2
 URL1="https://svn.omniti.com/__raas__/napp/appliance-root"
