@@ -7,33 +7,38 @@ for i in `find /mnt/circonus/x86_64 -not -user mocker`; do
    test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
 done
 
-REV=$1
-REV2=$2
-URL1="https://svn.omniti.com/__raas__/napp/appliance-root"
-URL2="https://svn.omniti.com/__raas__/napp/appliance-support"
-URL3="https://svn.omniti.com/__raas__/service/trunk/htdocs"
-if [ -z "$REV" ]; then
-  REV=`svn info $URL1 | awk '/^Last Changed Rev:/{print $NF;}'`
-fi
-if [ -z "$REV2" ]; then
-  REV2=`svn info $URL2 | awk '/^Last Changed Rev:/{print $NF;}'`
-fi
-VERSION="0.1r$REV"
-VERSION2="0.1r$REV2"
 NAME=circonus-napp
 TOPDIR=$(rpm -E %{_topdir})
+
+rm -rf ${TOPDIR}/BUILD/napp \
+ && git clone src@src.omniti.com:~circonus/field/napp ${TOPDIR}/BUILD/napp
+
+if [ -z "$REV" ]; then
+  REV=`(cd ${TOPDIR}/BUILD/napp && git show --format=%at | head -1)`
+fi
+if [ -z "$REV2" ]; then
+  REV2=`(cd ${TOPDIR}/BUILD/napp && git show --format=%at | head -1)`
+fi
+
+VERSION="0.1r$REV"
+VERSION2="0.1r$REV2"
+
+rm -rf ${TOPDIR}/BUILD/circonus-www \
+ && git clone src@src.omniti.com:~circonus/web/service ${TOPDIR}/BUILD/circonus-www
+
 SRCFILE=${TOPDIR}/SOURCES/${NAME}-${VERSION}.tar.gz
 SPECFILE=${TOPDIR}/SPECS/${NAME}.spec
 rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} ${SRCFILE} \
- && svn export --ignore-externals -q $URL1 ${TOPDIR}/BUILD/${NAME}-${VERSION} \
- && svn export --ignore-externals -q $URL3/c ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/c \
- && svn export --ignore-externals -q $URL3/i ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/i \
- && svn export --ignore-externals -q $URL3/s ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/s \
+ && mv ${TOPDIR}/BUILD/napp/appliance-root ${TOPDIR}/BUILD/${NAME}-${VERSION} \
+ && mkdir ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/etc/updatelogs \
+ && mv ${TOPDIR}/BUILD/circonus-www/htdocs/c ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
+ && mv ${TOPDIR}/BUILD/circonus-www/htdocs/i ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
+ && mv ${TOPDIR}/BUILD/circonus-www/htdocs/s ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRCFILE} ${NAME}-${VERSION})
 NAME2=circonus-selinux-module
 SRC2FILE=${TOPDIR}/SOURCES/${NAME2}-${VERSION2}.tar.gz
 rm -rf ${TOPDIR}/BUILD/${NAME2} ${SRC2FILE} \
- && svn export -q $URL2 ${TOPDIR}/BUILD/${NAME2} \
+ && mv ${TOPDIR}/BUILD/napp/appliance-support ${TOPDIR}/BUILD/${NAME2} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRC2FILE} ${NAME2})
 cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
 cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
@@ -48,7 +53,7 @@ Summary:	napp
 Group:		Applications/System
 License:	Proprietary commercial
 Vendor:		Circonus
-URL:		https://svn.omniti.com/trac/raas
+URL:		http://circonus.com/
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Source:		$NAME-$VERSION.tar.gz
 Source1:	$NAME2-$VERSION2.tar.gz
