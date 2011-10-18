@@ -90,7 +90,7 @@ jQuery(function ($)
                         // if we have it, use it
                         ($no_agents_test.length && $no_agents_test)
                         // else create, add and hide
-                        || $('<p id="no-available-agents">Sorry, there are no available Enterprise Agents for this account.  Please select another account or <a href="#">add a new Enterprise Agent</a> to this account.</p>').hide();
+                        || $('<p id="no-available-agents">Sorry, there are no available Enterprise Brokers for this account.  Please select another account or <a href="#">add a new Enterprise Broker</a> to this account.</p>').hide();
 
                 $list.empty().after($no_agents_msg);
                 $.each(data, function (i, agent)
@@ -133,7 +133,7 @@ jQuery(function ($)
             },
             error: function (request, status, error)
             {
-                alert("There was an error retrieving the agents");
+                alert("There was an error retrieving the brokers");
             }
         });
      

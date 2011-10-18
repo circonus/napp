@@ -4,4 +4,4 @@ if [ -z "$IP" ]; then
 	IP="(no address assigned)"
 	IP=`/sbin/ifconfig -a 2>&1 | /bin/awk '{if($1=="inet" && $2!="127.0.0.1"){print $2;exit;}}'`
 fi
-echo "Circonus Enterprise Agent @ $IP" > /etc/issue
+echo "Circonus Enterprise Broker @ $IP" > /etc/issue
