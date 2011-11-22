@@ -5,6 +5,9 @@ test -x $CURL || CURL=/opt/local/bin/curl
 test -x $CURL || CURL=curl
 BASE=http://updates.circonus.com/joyent/5.11
 UPDATES_AVAILABLE=0
+if [ -r /opt/napp/etc/napp.override ]; then
+	. /opt/napp/etc/napp.override
+fi
 
 record_svc_state() {
 	STATE=`/usr/bin/svcs -H -o state $1`
@@ -16,7 +19,7 @@ record_svc_state() {
 
 restore_svc_state() {
 	NEWSTATE=`/usr/bin/svcs -H -o state $1`
-	STATE=`eval echo '$svc_state_'$1`
+	STATE=`eval echo "\$svc_state_$1"`
 	if [ "$STATE" = "online" ]; then
 		if [ "$NEWSTATE" = "online" ]; then
 			echo "svcadm restart $1 ($NEWSTATE -> $STATE)"
