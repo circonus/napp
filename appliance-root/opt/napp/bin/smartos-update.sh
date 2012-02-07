@@ -53,7 +53,7 @@ handle_packages() {
 		ver=$2
 		file=$3
 		shift 3
-		cver=`pkg_info $pkg-\* 2>&1 | sed -e "s/$pkg-$ver/:$ver/" | awk -F: '/Information/ {print $2;}'`
+		cver=`pkg_info $pkg-\* 2>&1 | sed -e "s/$pkg-/:/" | awk -F: '/Information/ {print $2;}'`
 		if [ "$ver" != "$cver" ]; then
 			UPDATES_AVAILABLE=1
 			if [ -n "$cver" ]; then
