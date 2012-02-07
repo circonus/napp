@@ -1,7 +1,12 @@
 #!/bin/sh
 
 case `uname` in
-	SunOS)	/opt/napp/bin/sol11-canupdate.sh
+	SunOS)
+		if [ -x /opt/local/sbin/pkg_add ]; then
+			/opt/napp/bin/smartos-update.sh -n
+		else
+			/opt/napp/bin/sol11-canupdate.sh
+		fi
 		;;
 
 	*)	yum check-update -q | grep .

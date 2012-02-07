@@ -15,7 +15,13 @@ if [ -r /opt/napp/etc/doupdates ]; then
 	mv /opt/napp/etc/doupdates /opt/napp/etc/doingupdates
 
 	case `uname` in
-		SunOS)	/opt/napp/bin/sol11-update.sh > $LOG 2>&1
+		SunOS)
+			if [ -x /opt/local/sbin/pkg_add ]; then
+				# Joyent SmartOS
+				/opt/napp/bin/smartos-update.sh > $LOG 2>&1
+			else
+				/opt/napp/bin/sol11-update.sh > $LOG 2>&1 
+			fi
 			;;
 
 		*)	yum -y update > $LOG 2>&1
