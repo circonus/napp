@@ -23,7 +23,7 @@ record_svc_state() {
 
 restore_svc_state() {
 	NEWSTATE=`/usr/bin/svcs -H -o state $1`
-	STATE=`eval echo "\$svc_state_$1"`
+	STATE=`eval echo "\\\$svc_state_$1"`
 	if [ "$STATE" = "online" ]; then
 		if [ "$NEWSTATE" = "online" ]; then
 			echo "svcadm restart $1 ($NEWSTATE -> $STATE)"
@@ -43,6 +43,14 @@ web_init() {
 		echo "initializing web interface"
 		cp -p /opt/napp/etc/django-stuff/napp_stub.sqlite.factory \
 			/opt/napp/etc/django-stuff/napp_stub.sqlite
+	fi
+}
+
+noit_init() {
+	if [ ! -r /opt/noit/prod/etc/noit.conf ]; then
+		echo "initializing noit"
+		cp -p /opt/noit/prod/etc/noit.conf.factory \
+			/opt/noit/prod/etc/noit.conf
 	fi
 }
 
@@ -85,6 +93,7 @@ handle_packages `$CURL -s $BASE/ea.pkgs`
 
 if [ "$NO_UPDATES" = "0" ]; then
 	web_init
+	noit_init
 fi
 
 if [ "$UPDATES_AVAILABLE" = "0" ]; then
