@@ -3,7 +3,7 @@
 case `uname` in
 	SunOS)
 		if [ -x /opt/local/sbin/pkg_add ]; then
-			/opt/napp/bin/smartos-update.sh -n
+			/opt/napp/bin/smartos-canupdate.sh
 		else
 			/opt/napp/bin/sol11-canupdate.sh
 		fi
