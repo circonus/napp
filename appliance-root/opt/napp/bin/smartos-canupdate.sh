@@ -16,6 +16,10 @@ if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
 fi
 
+PKGIN=/opt/local/bin/pkgin
+GREP=/opt/local/bin/grep
+AWK=/opt/local/bin/awk
+
 handle_packages() {
 	while [ -n "$*" ];
 	do
@@ -23,7 +27,7 @@ handle_packages() {
 		ver=$2
 		file=$3
 		shift 3
-		cver=`pkgin list | grep -E ^$pkg- | awk "{ print substr(\\\$1, length(\"$pkg\")+2); }"`
+		cver=`$PKGIN list | $GREP -E ^$pkg- | $AWK "{ print substr(\\\$1, length(\"$pkg\")+2); }"`
 		if [ "$ver" != "$cver" ]; then
 			UPDATES_AVAILABLE=1
 			if [ -n "$cver" ]; then
