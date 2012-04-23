@@ -10,7 +10,7 @@ do
 		break
 	fi
 done
-BASE=http://updates.circonus.com/joyent/5.11
+BASE=http://updates.circonus.com/joyent/smartos
 UPDATES_AVAILABLE=0
 if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
