@@ -74,7 +74,7 @@ handle_packages() {
 			fi
 			echo "downloading $BASE/$file"
 			$CURL -s -o $dldir/$file $BASE/$file || \
-				bail "download failed"
+				bail "Download failed.  Tried $BASE/$file"
 			if [ -n "$cver" ]; then
 				echo "removing $pkg"
 				yes | /usr/sbin/pkgrm $pkg
@@ -85,6 +85,9 @@ handle_packages() {
 			fi
 		fi
 	done
+	echo ""
+	echo "Feel free to delete files in $dldir if you wish."
+	echo ""
 }
 
 record_svc_state jezebel
@@ -92,7 +95,12 @@ record_svc_state unbound
 record_svc_state noitd
 record_svc_state napp
 
-handle_packages `$CURL -s $BASE/ea.pkgs`
+pkglist=`$CURL -s $BASE/ea.pkgs`
+if [ `echo $pkglist | awk '{ print substr($0,0,4)}'` != "OMNI" ]; then
+	bail "Package list doesn't look right.  Fetched $BASE/ea.pkgs"
+fi
+
+handle_packages $pkglist
 
 web_init
 noit_init
