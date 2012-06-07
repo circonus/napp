@@ -9,6 +9,11 @@ if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
 fi
 
+bail() {
+	echo "$@"
+	exit 1
+}
+
 record_svc_state() {
 	STATE=`/usr/bin/svcs -H -o state $1`
 	if [ "$STATE" != "online" ]; then
@@ -59,15 +64,24 @@ handle_packages() {
 		file=$3
 		shift 3
 		cver=`pkginfo -l $pkg 2>&1 | awk '{if($1 == "VERSION:") { print $2;}}'`
+		dldir=/var/tmp/circonus
 		if [ "$ver" != "$cver" ]; then
 			UPDATES_AVAILABLE=1
+			if [ ! -d $dldir ]; then
+				echo "preparing download directory"
+				mkdir $dldir || \
+					bail "failed to create download directory: $dldir"
+			fi
+			echo "downloading $BASE/$file"
+			$CURL -s -o $dldir/$file $BASE/$file || \
+				bail "download failed"
 			if [ -n "$cver" ]; then
 				echo "removing $pkg"
 				yes | /usr/sbin/pkgrm $pkg
 			fi
 			if [ -n "$ver" ]; then
 				echo "adding $pkg from $file"
-				yes | /usr/sbin/pkgadd -d $BASE/$file all
+				yes | /usr/sbin/pkgadd -d $dldir/$file all
 			fi
 		fi
 	done
