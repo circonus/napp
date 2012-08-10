@@ -1,13 +1,23 @@
 #!/bin/sh
+RELMAJOR=`cat /etc/redhat-release | awk '{ print substr($3,0,1) }'`
 # check permissions
-for i in `find /mnt/circonus/i386 -not -user mocker`; do
+for i in `find /mnt/circonus/centos/${RELMAJOR}/i386 -not -user mocker`; do
    test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
 done
-for i in `find /mnt/circonus/x86_64 -not -user mocker`; do
+for i in `find /mnt/circonus/centos/${RELMAJOR}/x86_64 -not -user mocker`; do
    test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
 done
 
 NAME=circonus-napp
+
+# This is used to set the dist macro in rpmbuild and mock
+# CentOS 5 buildsys-macros sets %{dist} to ".el5.centos" and we just want ".el5"
+if [ "x$RELMAJOR" == "x5" ]; then
+   DIST=".el5"
+else
+   DIST=$(rpm -E %{?dist})
+fi
+
 TOPDIR=$(rpm -E %{_topdir})
 
 rm -rf ${TOPDIR}/BUILD/napp \
@@ -47,7 +57,7 @@ sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF
 %define		rrelease	0.2
 Name:		circonus-napp
 Version:	%{rversion}
-Release:	%{rrelease}
+Release:	%{rrelease}%{?dist}
 Summary:	napp
 
 Group:		Applications/System
@@ -70,6 +80,9 @@ Requires(preun): initscripts
 Requires(preun): coreutils
 Requires:	mod_wsgi, noit_prod, python-sqlite2, curl, httpd
 
+%if 0%{?rhel} == 6
+Requires:	policycoreutils-python
+%endif
 
 %description
 Napp is a package with Enterprise Appliance files
@@ -202,6 +215,8 @@ fi
 
 
 %changelog
+* Fri Aug 10 2012 Eric Sproul <esproul@omniti.com> - 0.1r1339085555-0.2
+- fix dependency for el6, add dist name
 * Fri Aug 12 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.2
 - fix typo
 * Mon May 23 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.1
@@ -229,9 +244,9 @@ fi
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
 - Initial package.
 EOF
-rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" $SPECFILE 
-mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-i386/result/${NAME}-${VERSION}-0.2.i386.rpm /mnt/circonus/i386/RPMS/
-mock -r circonus-5-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-x86_64/result/${NAME}-${VERSION}-0.2.x86_64.rpm /mnt/circonus/x86_64/RPMS/
-/mnt/make-repo-metadata /mnt/circonus/
+rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" --define "dist $DIST" $SPECFILE 
+mock -r circonus-${RELMAJOR}-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm
+cp /var/lib/mock/circonus-${RELMAJOR}-i386/result/${NAME}-${VERSION}-0.2${DIST}.i386.rpm /mnt/circonus/centos/${RELMAJOR}/i386/RPMS/
+mock -r circonus-${RELMAJOR}-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm
+cp /var/lib/mock/circonus-${RELMAJOR}-x86_64/result/${NAME}-${VERSION}-0.2${DIST}.x86_64.rpm /mnt/circonus/centos/${RELMAJOR}/x86_64/RPMS/
+/mnt/make-repo-metadata /mnt/circonus/centos/${RELMAJOR}
