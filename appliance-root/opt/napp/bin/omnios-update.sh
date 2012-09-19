@@ -1,7 +1,8 @@
 #!/bin/bash
 
-CIRCONUS_REPO=http://pkg-internal.omniti.com/circonus/
+CIRCONUS_REPO=http://pkg-internal.omniti.com/circonus-pilot/
 OMNITI_REPO=http://pkg.omniti.com/omniti-ms/
+
 if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
 fi
@@ -15,16 +16,16 @@ bomb() {
 }
 
 configure_publishers() {
-    /usr/bin/pkg publisher ms.omniti.com || \
+    /usr/bin/pkg publisher ms.omniti.com > /dev/null 2>&1 || \
         /usr/bin/pkg set-publisher -g $OMNITI_REPO ms.omniti.com || \
         bomb "Error: setting publisher ms.omniti.com failed"
-    /usr/bin/pkg publisher circonus || \
+    /usr/bin/pkg publisher circonus > /dev/null 2>&1 || \
         /usr/bin/pkg set-publisher -g $CIRCONUS_REPO circonus || \
         bomb "Error: setting publisher circonus failed"
 }
 
 record_svc_state() {
-	STATE=`/usr/bin/svcs -H -o state $1`
+	STATE=`/usr/bin/svcs -H -o state $1 2> /dev/null`
 	if [ "$STATE" != "online" ]; then
 		STATE=offline
 	fi
@@ -64,6 +65,7 @@ noit_init() {
 	fi
 }
 
+configure_publishers
 record_svc_state jezebel
 record_svc_state unbound
 record_svc_state noitd
