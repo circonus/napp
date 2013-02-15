@@ -1,0 +1,252 @@
+module(..., package.seeall)
+
+local sessions = {}
+local HttpClient = require('noit.HttpClient') 
+
+function new_session()
+  local uuid = noit.uuid()
+  sessions[uuid] = { }
+  sessions[uuid]["expires"] = os.time() + 86400
+  return uuid
+end
+
+function fetch_url_to_file(url, file, mode)
+  local callbacks = { }
+  local client = HttpClient:new(callbacks)
+  local body = ''
+  callbacks.consume = function (str)
+    body = body .. str
+  end
+  local port = 80
+  local target
+  local schema, host, uri = url:match("^(https?)://([^/]+)(/.*)$")
+  if uri == nil then return false, "could not parse URL" end
+  target = host
+  if schema == "https" then port = 443 end
+  local hostwoport, aport = host:match("^(.*):(%d+)$")
+  if (aport or 0) > 0 then
+    target = hostwoport
+    port = aport
+  end
+  if not noit.valid_ip(target) then
+    local dns = noit.dns()
+    local r = dns:lookup(host)
+    if r == nil or r.a == nil then return false, "could not resolve host" end
+    target = r.a
+  end
+  client:connect(target, port)
+  client:do_request("GET", uri, { Host=host })
+  client:get_response()
+  if client.code ~= 200 then return false, "fetching url failed: HTTP CODE " .. client.code end
+  if body:len() == 0 then return false, "fetching url failed: blank document" end
+  local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  if fd >= 0 then
+    local len, error = noit.write(fd, body)
+    noit.close(fd)
+    if len ~= body:len() then return false, "failed write: " .. (error or "unknown") end
+    return true
+  end
+  return false, "failed to open target file for writing"
+end
+
+function get_session(uuid)
+  local now = os.time()
+  -- sweep old sessions out
+  for u, a in pairs(sessions) do
+    if a["expires"] < now then sessions[u] = nil end
+  end
+  if(uuid == nil) then return nil end
+  return sessions[uuid]
+end
+
+function inside()
+  return noit.conf_get_boolean("/noit/circonus/appliance/inside") or false
+end
+
+function pki_url()
+  return noit.conf_get_string("/noit/circonus/appliance/pki_url") or "http://s.circonus.com/pki"
+end
+function circonus_url()
+  return noit.conf_get_string("/noit/circonus/appliance/circonus_url") or "https://circonus.com"
+end
+
+function pki_info()
+  local keyfile = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
+  local csrfile = keyfile:gsub("%.key$", ".csr")
+  local certfile = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
+  local crl = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
+  local ca_chain = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
+
+  local details = {}
+  local needs = false
+
+  details["crl"] = { file=crl, exists=not not noit.stat(crl) }
+  details["key"] = { file=keyfile, exists=not not noit.stat(keyfile) }
+  details["csr"] = { file=csrfile, exists=not not noit.stat(csrfile) }
+  details["cert"] = { file=certfile, exists=not not noit.stat(certfile) }
+  details["ca"] = { file=ca_chain, exists=not not noit.stat(ca_chain) }
+  return details
+end
+
+function needs_pki()
+  local d = pki_info()
+  if (d["crl"].file == nil or d["crl"].exists) and d["ca"].exists then return false, d end
+  return true, d
+end
+
+function needs_provisioning()
+  local d = pki_info()
+  if d["key"].exists and d["csr"].exists and d["cert"].exists then return false, d end
+  return true, d
+end
+
+function fix_stage(http)
+  local hash = '';
+  if inside() then hash = 'inside' end
+  local req = http:request()
+  local username = noit.conf_get_string("/noit/circonus/appliance/username")
+  local password = noit.conf_get_string("/noit/circonus/appliance/password")
+  local session = req:cookie("appsession")  
+  if username == nil or password == nil then return "/initial" end -- setup ability to login
+  if get_session(session) == nil then return "/login" end -- require login
+  if req:uri():match("^/api/") then return nil end -- pass through API
+  if needs_pki() or req:uri() == "/pki" then return "/pki", hash end -- needs CA and possibly CRL
+  if needs_provisioning() then return "/provision", hash end -- needs provisioning
+  if req:uri() == "/" then return "/dash" end
+  return nil
+end
+
+
+function redirect(http, url)
+  http:status(302, "REDIRECT")
+  http:header('Location', url)
+  http:flush_end()
+  error("redirecting, terminating response")
+end
+
+function inspect(http)
+  local req = http:request()
+  noit.log("error", "TYPE  : " .. type(req) .. "\n")
+  noit.log("error", "URI   : " .. req:uri() .. "\n")
+  noit.log("error", "METHOD: " .. req:method() .. "\n")
+  noit.log("error", "QUERYSTRING:\n")
+  for key, val in pairs(req:querystring()) do
+    noit.log("error", "    "..key.." : "..val.."\n")
+  end
+  noit.log("error", "HEADERS:\n")
+  for hdr, val in pairs(req:headers()) do
+    noit.log("error", "    "..hdr.." : "..val.."\n")
+  end
+  local p = req:payload()
+  if p == nil then
+    noit.log("error", "NO PAYLOAD\n")
+  else
+    noit.log("error", "PAYLOAD:\n%s\n\n", p);
+    for key, val in pairs(req:form()) do
+      noit.log("error", "    "..key.." : "..val.."\n")
+    end
+  end
+end
+
+function serve_file(mime_type)
+  return function(rest, file, st)
+    local http = rest:http()
+    local fd, errno = noit.open(file, bit.bor(O_RDONLY,O_NOFOLLOW))
+    if ( fd < 0 ) then
+      http:status(500, "ERROR")
+      http:flush_end()
+      return
+    end
+    http:status(200, "OK")
+    http:header("Content-Type", mime_type)
+    if not http:option(http.CHUNKED) then http:option(http.CLOSE) end
+    http:option(http.GZIP)
+    http:write_fd(fd)
+    noit.close(fd)
+    http:flush_end()
+  end
+end
+
+function lua_embed(rest, file, st)
+  local http = rest:http()
+  local inp = io.open(file, "rb")
+  local data = inp:read("*all")
+  inp:close();
+
+  local f,e = assert(loadstring("return function(http)\n" .. data .. "\nend\n"))
+  setfenv(f, getfenv(2))
+  f = f()
+
+  http:status(200, "OK")
+  http:header("Content-Type", "text/html")
+  if not http:option(http.CHUNKED) then http:option(http.CLOSE) end
+  http:option(http.GZIP)
+  f(http)
+  http:flush_end();
+end
+
+
+local handlers = {
+  default = { serve = serve_file("application/unknown") },
+  lua = { serve = lua_embed },
+  css = { serve = serve_file("text/css") },
+  js = { serve = serve_file("text/javascript") },
+  ico = { serve = serve_file("image/x-icon") },
+  png = { serve = serve_file("image/png") },
+  jpg = { serve = serve_file("image/jpeg") },
+  jpe = { serve = serve_file("image/jpeg") },
+  jpeg = { serve = serve_file("image/jpeg") },
+  gif = { serve = serve_file("image/gif") },
+  html = { serve = serve_file("text/html") },
+}
+
+function file_not_found(rest)
+  local http = rest:http()
+  http:status(404, "NOT FOUND")
+  http:option(http.CLOSE)
+  http:flush_end()
+end
+
+function serve(rest, config, file, ext)
+  local st, errno, error = noit.stat(file)
+  if(st == nil or bit.band(st.mode, S_IFREG) == 0) then
+    local errfile = config.webroot .. '/404.lua'
+    if file == errfile then
+      return file_not_found(rest)
+    else
+      return serve(rest, config, errfile, ext)
+    end
+  end
+
+  if handlers[ext] == nil then ext = 'default' end
+  handlers[ext].serve(rest, file, st)
+end
+
+function handler(rest, config)
+  local http = rest:http()
+  local req = http:request()
+  
+  
+  local req_headers = req:headers()
+  local host = req:headers("Host")
+  local uri = req:uri()
+
+  local file = config.webroot .. req:uri()
+
+  if file:match("/$") then file = file .. "index" end
+
+  local extre = noit.pcre("\\.([^\\./]+)$")
+  local rv, m, ext = extre(file)
+
+  if not rv then
+    local replacement_uri, hash = fix_stage(http)
+    if replacement_uri ~= nil and replacement_uri ~= req:uri() then
+      if hash then return redirect(http, replacement_uri .. '#' .. hash) end
+      return redirect(http, replacement_uri)
+    end
+    file = file .. '.lua'
+    ext = 'lua'
+  end
+
+  serve(rest, config, file, ext)
+end

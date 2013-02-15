@@ -13,6 +13,8 @@ jQuery(function ($)
 
     $form.bind("submit", step1);
     $login.bind("click", step1);
+    if(document.location.hash == "#inside")
+      $("#login_form .inside").show();
 
     function step1(e)
     {
