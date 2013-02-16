@@ -10,14 +10,11 @@ if keyfile ~= nil then
   if st ~= nil then
     out = { status="success", detail="exists" }
   else
-    local p, inf, outf, errf = noit.spawn(
-      "openssl", { 'openssl', 'genrsa', '-out', keyfile, 2048 }, {})
-    local rv = p:wait()
+    local rv, error = generate_key(keyfile)
     if rv == 0 then
-      noit.chmod(keyfile, tonumber(0400, 8))
       out = { status="success", detail="created" }
     else
-      out = { status="failed", error=err:read("EOF") }
+      out = { status="failed", error=error }
     end
   end
 end

@@ -1,3 +1,23 @@
+local req = http:request()
+local post = req:form()
+local error
+-- You can't get here if you already have a csr
+
+if not needs_provisioning() then redirect(http, "/") end
+if req:method() == "POST" and
+   post['country_code'] ~= nil and post['state_prov'] ~= nil and
+   post['account_name'] ~= nil and post['cn'] ~= nil then
+  local subj = '/C=' .. post['country_code'] ..
+               '/ST=' .. post['state_prov'] ..
+               '/O=' .. post['account_name'] ..
+               '/CN=' .. post['cn']
+  local rv
+  rv, error = generate_csr(subj)
+  if rv == 0 then
+    redirect(http, "/await_provisioning")
+  end
+end
+
 http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -16,7 +36,16 @@ http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
       <img class="logo" src="/i/content/circonus-enterprise-icon.png" />
       <p class="intro">
 		This Enterprise Broker has not yet been provisioned.  During this three step process you will be asked to log into your Circonus account, and identify and associate this broker with your account.
-      </p>
+      </p>]=])
+if error ~= nil then
+  error = http:htmlentities(error, true)
+  error = error:gsub("\n","<br/>")
+  http:write([=[<br style="clear:both"/>
+                <div id="error"><p>]=])
+  http:write(error)
+  http:write([=[</p></div>]=])
+end
+http:write([=[
       <br style="clear:both"/>
         <h2 id="provision-head" class="form-head">Provision Broker</h2>
       <br style="clear:both"/>

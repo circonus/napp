@@ -10,7 +10,48 @@ function new_session()
   return uuid
 end
 
-function fetch_url_to_file(url, file, mode)
+function generate_key(keyfile)
+  local p, inf, outf, errf = noit.spawn(
+    "openssl", { 'openssl', 'genrsa', '-out', keyfile, 2048 }, {})
+  local rv = p:wait()
+  if rv == 0 then
+    noit.chmod(keyfile, tonumber(0400, 8))
+    return rv
+  end
+  return rv, errf:read("EOF")
+end
+
+function generate_csr(subject, csrfile)
+  local pki = pki_info()
+  local fd = noit.open('/opt/napp/etc/ssl/ssl_subj.txt',
+                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0644,8))
+  if fd < 0 then
+    return fd, "Could not store broker PKI CN"
+  end
+  noit.write(fd, subject)
+  noit.close(fd)
+  local p, inf, outf, errf = noit.spawn(
+    "openssl", { 'openssl', 'req', '-key', pki.key.file,
+                 '-days', '365', '-new', '-out', pki.csr.file,
+                 '-config', '/opt/napp/etc/napp-openssl.cnf',
+                 '-subj', subject}, {})
+  local rv = p:wait()
+  if rv == 0 then
+    noit.chmod(pki.csr.file, tonumber(0444, 8))
+    return rv
+  end
+  return rv, errf:read("EOF")
+end
+
+function get_subject()
+  local inp = io.open('/opt/napp/etc/ssl/ssl_subj.txt', "rb")
+  local data = inp:read("*all")
+  inp:close();
+  local cn = data:match("CN=([^/]+)")
+  return cn
+end
+
+function fetch_url(url)
   local callbacks = { }
   local client = HttpClient:new(callbacks)
   local body = ''
@@ -20,7 +61,7 @@ function fetch_url_to_file(url, file, mode)
   local port = 80
   local target
   local schema, host, uri = url:match("^(https?)://([^/]+)(/.*)$")
-  if uri == nil then return false, "could not parse URL" end
+  if uri == nil then return false, nil, "could not parse URL" end
   target = host
   if schema == "https" then port = 443 end
   local hostwoport, aport = host:match("^(.*):(%d+)$")
@@ -31,13 +72,19 @@ function fetch_url_to_file(url, file, mode)
   if not noit.valid_ip(target) then
     local dns = noit.dns()
     local r = dns:lookup(host)
-    if r == nil or r.a == nil then return false, "could not resolve host" end
+    if r == nil or r.a == nil then return false, nil, "could not resolve host" end
     target = r.a
   end
-  client:connect(target, port)
+  client:connect(target, port, schema == "https", host)
   client:do_request("GET", uri, { Host=host })
   client:get_response()
-  if client.code ~= 200 then return false, "fetching url failed: HTTP CODE " .. client.code end
+  return true, client.code, body
+end
+
+function fetch_url_to_file(url, file, mode)
+  local success, code, body = fetch_url(url)
+  if not success then return success, body end
+  if code ~= 200 then return false, "fetching url failed: HTTP CODE " .. client.code end
   if body:len() == 0 then return false, "fetching url failed: blank document" end
   local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
   if fd >= 0 then
@@ -47,6 +94,71 @@ function fetch_url_to_file(url, file, mode)
     return true
   end
   return false, "failed to open target file for writing"
+end
+
+function proxy_post(url, keys, form)
+  local callbacks = { }
+  local client = HttpClient:new(callbacks)
+  local body = ''
+  callbacks.consume = function (str)
+    body = body .. str
+  end
+  local port = 80
+  local target
+  local schema, host, uri = url:match("^(https?)://([^/]+)(/.*)$")
+  if uri == nil then return 0, "could not parse URL" end
+  target = host
+  if schema == "https" then port = 443 end
+  local hostwoport, aport = host:match("^(.*):(%d+)$")
+  if (aport or 0) > 0 then
+    target = hostwoport
+    port = aport
+  end
+  if not noit.valid_ip(target) then
+    local dns = noit.dns()
+    local r = dns:lookup(host)
+    if r == nil or r.a == nil then return 0, "could not resolve host" end
+    target = r.a
+  end
+
+  local payload = {}
+  if keys == nil then keys = {} end
+  for i, key in pairs(keys) do
+     local pair = noit.extras.url_encode(key)
+     if form[key] ~= nil then
+       pair = pair .. '=' .. noit.extras.url_encode(form[key])
+     end
+     table.insert(payload, pair)
+  end
+  -- make a string out of this
+  payload = table.concat(payload, '&')
+
+  client:connect(target, port, schema == "https", host)
+  client:do_request("POST", uri,
+                    { Host=host, Accept='*/*',
+                      ['Content-Type']="application/x-www-form-urlencoded" },
+                    payload)
+  client:get_response()
+  return client.code, body
+end
+
+function list_accounts(form)
+  return proxy_post(circonus_url() .. "/api/json/list_accounts",
+                    { "email", "password" },
+                    form)
+end
+
+function list_private_agents(form)
+  return proxy_post(circonus_url() .. "/api/json/list_private_agents",
+                    { "email", "password", "account" },
+                    form)
+end
+
+function get_agent_info(subject)
+  local cn_encoded = noit.extras.url_encode(subject)
+  local success, code, body =
+    fetch_url(circonus_url() .. "/api/json/agent?cn=" .. cn_encoded)
+  return code, body
 end
 
 function get_session(uuid)
@@ -96,7 +208,13 @@ end
 
 function needs_provisioning()
   local d = pki_info()
-  if d["key"].exists and d["csr"].exists and d["cert"].exists then return false, d end
+  if d["key"].exists and d["csr"].exists then return false, d end
+  return true, d
+end
+
+function needs_certificate()
+  local d = pki_info()
+  if d["key"].exists and d["cert"].exists then return false, d end
   return true, d
 end
 
@@ -112,6 +230,7 @@ function fix_stage(http)
   if req:uri():match("^/api/") then return nil end -- pass through API
   if needs_pki() or req:uri() == "/pki" then return "/pki", hash end -- needs CA and possibly CRL
   if needs_provisioning() then return "/provision", hash end -- needs provisioning
+  if needs_certificate() then return "/await_provisioning", hash end -- needs provisioning
   if req:uri() == "/" then return "/dash" end
   return nil
 end
