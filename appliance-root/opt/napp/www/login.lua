@@ -7,9 +7,7 @@ if req:method() == "POST" then
     if needed_user ~= nil and needed_pass ~= nil and
       f['username'] == needed_user and f['password'] == needed_pass then
       http:set_cookie("appsession", new_session())
-      http:status(302, 'REDIRECT')
-      http:header('Location', '/dash')
-      return
+      redirect(http, "/dash")
     end
   end
 end

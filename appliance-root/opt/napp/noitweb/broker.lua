@@ -295,7 +295,7 @@ end
 function redirect(http, url)
   http:status(302, "REDIRECT")
   http:header('Location', url)
-  http:header('Content-Length', '0');
+  http:header('Content-Length', '0')
   http:flush_end()
   error("redirecting, terminating response")
 end
@@ -401,13 +401,16 @@ end
 function handler(rest, config)
   local http = rest:http()
   local req = http:request()
-  
-  
+
   local req_headers = req:headers()
   local host = req:headers("Host")
   local uri = req:uri()
 
   local file = config.webroot .. req:uri()
+
+  if config.should_ssl == "true" and not needs_certificate() then
+    redirect(http, "https://" .. host .. ":43191" .. req:uri())
+  end
 
   if file:match("/$") then file = file .. "index" end
 
