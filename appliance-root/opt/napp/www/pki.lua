@@ -24,9 +24,9 @@ http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
           <fieldset id="pki" class="first_step">
             <legend><em>1.</em> Security Information</legend>
             <div id="circonus-pki">
-              <label for="pki_url">PKI Base URL</label>
-              <input id="pki_url" type="text" name="pki_url" value="]=])
-    http:write(pki_url())
+              <label for="circonus_url">Circonus Base URL</label>
+              <input id="circonus_url" type="text" name="circonus_url" value="]=])
+    http:write(circonus_url())
     http:write([=[" />
               <button id="fetch" type="button">Configure</button>
             </div>

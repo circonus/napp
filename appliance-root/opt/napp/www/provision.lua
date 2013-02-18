@@ -4,19 +4,6 @@ local error
 -- You can't get here if you already have a csr
 
 if not needs_provisioning() then redirect(http, "/") end
-if req:method() == "POST" and
-   post['country_code'] ~= nil and post['state_prov'] ~= nil and
-   post['account_name'] ~= nil and post['cn'] ~= nil then
-  local subj = '/C=' .. post['country_code'] ..
-               '/ST=' .. post['state_prov'] ..
-               '/O=' .. post['account_name'] ..
-               '/CN=' .. post['cn']
-  local rv
-  rv, error = generate_csr(subj)
-  if rv == 0 then
-    redirect(http, "/await_provisioning")
-  end
-end
 
 http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
@@ -54,7 +41,7 @@ http:write([=[
             <legend><em>1.</em> Enter Circonus Credentials</legend>
             <div id="circonus-creds">
             <div class="inside">
-              <label for="api_url">Cirocnus Base URL</label>
+              <label for="api_url">Circonus Base URL</label>
               <input id="api_url" type="text" name="api_url" value="]=])
     http:write(circonus_url())
     http:write([=[" />
@@ -76,7 +63,7 @@ http:write([=[
             <ul id="avail-agents">
             </ul>
             <p class="submit-block">
-              <input type="submit" value="Provision Broker &raquo;">
+              <button type="submit" value="Provision Broker &raquo;">Provision Broker &raquo;</button>
             </p>
           </fieldset>
         </form>

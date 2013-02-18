@@ -91,10 +91,10 @@ jQuery(function ($) {
     var $status = $('#pki-'+type+'-ready')
     $status.removeClass().addClass('progress');
     $.ajax({
-      url: "/api/json/cafetch?type=" + type,
+      url: "/api/json/cafetch",
       type: "POST",
       data: {
-        pki_url: $('#pki_url').val(),
+        circonus_url: $('#circonus_url').val(),
         type: type
       },
       dataType: "json",

@@ -2,6 +2,7 @@ module(..., package.seeall)
 
 local sessions = {}
 local HttpClient = require('noit.HttpClient') 
+local json = require('json')
 
 function new_session()
   local uuid = noit.uuid()
@@ -84,8 +85,17 @@ end
 function fetch_url_to_file(url, file, mode)
   local success, code, body = fetch_url(url)
   if not success then return success, body end
-  if code ~= 200 then return false, "fetching url failed: HTTP CODE " .. client.code end
+  if code ~= 200 then return false, "fetching url failed: HTTP CODE " .. code end
   if body:len() == 0 then return false, "fetching url failed: blank document" end
+  -- fetch the previous contents
+  local inp = io.open(file, "rb")
+  if inp ~= nil then
+    local data = inp:read("*all")
+    inp:close();
+    -- short-circuit if the contents haven't changed
+    if data == body then return true end
+  end
+
   local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
   if fd >= 0 then
     local len, error = noit.write(fd, body)
@@ -94,6 +104,35 @@ function fetch_url_to_file(url, file, mode)
     return true
   end
   return false, "failed to open target file for writing"
+end
+
+function fetchCA(type, new_pki_url)
+  local url = circonus_url()
+  local try_url = url
+  if new_pki_url ~= nil then try_url = new_pki_url end
+  if type == 'ca' then try_url = try_url .. "/pki/ca.crt"
+  else try_url = try_url .. "/pki/ca.crl" end
+  local xpath = '//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/'
+  local file
+  if type == "ca" then
+    file = noit.conf(xpath .. "ca_chain")
+  elseif type == "crl" then
+    file = noit.conf(xpath .. "crl")
+  else
+    return false, "unsupported type"
+  end
+  if file ~= nil then
+noit.log("error", "Fetching -> " .. try_url .. "\n")
+    local rv, error = fetch_url_to_file(try_url, file, tonumber(0644,8))
+    if rv then
+      if new_pki_url ~= nil and new_pki_url ~= url then
+        noit.conf_get_string("/noit/circonus/appliance/circonus_url", new_pki_url)
+      end
+      return true
+    end
+    return false, error
+  end
+  return false, type .. " not supported on this broker"
 end
 
 function proxy_post(url, keys, form)
@@ -154,6 +193,16 @@ function list_private_agents(form)
                     form)
 end
 
+function submit_agent_csr(form)
+  local pki = pki_info()
+  local inp = io.open(pki.csr.file, "rb")
+  form.csr = inp:read("*all")
+  inp:close();
+  return proxy_post(circonus_url() .. "/api/json/submit_agent_csr",
+                    { "email", "password", "account", "csr" },
+                    form)
+end
+
 function get_agent_info(subject)
   local cn_encoded = noit.extras.url_encode(subject)
   local success, code, body =
@@ -175,9 +224,6 @@ function inside()
   return noit.conf_get_boolean("/noit/circonus/appliance/inside") or false
 end
 
-function pki_url()
-  return noit.conf_get_string("/noit/circonus/appliance/pki_url") or "http://s.circonus.com/pki"
-end
 function circonus_url()
   return noit.conf_get_string("/noit/circonus/appliance/circonus_url") or "https://circonus.com"
 end
@@ -208,7 +254,17 @@ end
 
 function needs_provisioning()
   local d = pki_info()
-  if d["key"].exists and d["csr"].exists then return false, d end
+  if d["cert"].exists then return false, d end
+  if d["key"].exists and d["csr"].exists then
+    local code, body = get_agent_info(get_subject())
+    if code == 200 then
+      local pki_info = pki_info()
+      local info = json.decode(body)
+      if info.csr ~= nil then
+        return false, d
+      end
+    end
+  end
   return true, d
 end
 
@@ -239,6 +295,7 @@ end
 function redirect(http, url)
   http:status(302, "REDIRECT")
   http:header('Location', url)
+  http:header('Content-Length', '0');
   http:flush_end()
   error("redirecting, terminating response")
 end
@@ -368,4 +425,54 @@ function handler(rest, config)
   end
 
   serve(rest, config, file, ext)
+end
+
+function do_periodically(f, period)
+  return function()
+    while true do
+      f()
+      noit.sleep(period)
+    end
+  end
+end
+
+function write_contents_if_changed(file, body, mode)
+  local inp = io.open(file, "rb")
+  if inp ~= nil then
+    local data = inp:read("*all")
+    inp:close();
+    if body == data then return true end
+  end
+  local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  if fd >= 0 then
+    local len, error = noit.write(fd, body)
+    noit.close(fd)
+    if len ~= body:len() then return false end
+    return true
+  end
+  return false
+end
+
+function refresh_cert()
+  noit.log("error", "Circonus certificate refresh\n")
+  while true do
+    local code, body = get_agent_info(get_subject())
+    if code == 200 then
+      local pki_info = pki_info()
+      local info = json.decode(body)
+      if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
+        write_contents_if_changed(pki_info.cert.file, info.cert)
+      end
+    end
+    local info = pki_info()
+    if info.cert.exists then break end
+    noit.log("error", "Circonus certificate non-existent, polling(5)\n")
+    noit.sleep(5)
+  end
+end
+
+function start_upkeep()
+  noit.coroutine_spawn(do_periodically(refresh_cert, 3600))
+  noit.coroutine_spawn(do_periodically(function() fetchCA('ca') end, 3600))
+  noit.coroutine_spawn(do_periodically(function() fetchCA('crl') end, 3600))
 end
