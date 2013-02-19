@@ -2,7 +2,9 @@
 
 case `uname` in
 	SunOS)
-		if [ -x /opt/local/sbin/pkg_add ]; then
+		if [ -n "`grep OmniOS /etc/release`" ]; then
+			/opt/napp/bin/omnios-canupdate.sh
+		elif [ -x /opt/local/sbin/pkg_add ]; then
 			/opt/napp/bin/smartos-canupdate.sh
 		else
 			/opt/napp/bin/sol11-canupdate.sh
