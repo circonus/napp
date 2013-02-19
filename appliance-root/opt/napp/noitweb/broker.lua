@@ -436,7 +436,7 @@ end
 function do_periodically(f, period)
   return function()
     while true do
-      f()
+      pcall(f)
       noit.sleep(period)
     end
   end
