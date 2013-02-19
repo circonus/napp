@@ -16,7 +16,9 @@ if [ -r /opt/napp/etc/doupdates ]; then
 
 	case `uname` in
 		SunOS)
-			if [ -x /opt/local/sbin/pkg_add ]; then
+			if [ -n "`grep OmniOS /etc/release`" ]; then
+				/opt/napp/bin/omnios-canupdate.sh > $LOG 2>&1
+			elif [ -x /opt/local/sbin/pkg_add ]; then
 				# Joyent SmartOS
 				/opt/napp/bin/smartos-update.sh > $LOG 2>&1
 			else
