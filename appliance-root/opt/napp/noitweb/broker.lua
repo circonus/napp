@@ -46,6 +46,7 @@ end
 
 function get_subject()
   local inp = io.open('/opt/napp/etc/ssl/ssl_subj.txt', "rb")
+  if inp == nil then return nil end
   local data = inp:read("*all")
   inp:close();
   local cn = data:match("CN=([^/]+)")
@@ -255,8 +256,10 @@ end
 function needs_provisioning()
   local d = pki_info()
   if d["cert"].exists then return false, d end
+  local subj = get_subject()
+  if subj == nil then return true, d end
   if d["key"].exists and d["csr"].exists then
-    local code, body = get_agent_info(get_subject())
+    local code, body = get_agent_info(subj)
     if code == 200 then
       local pki_info = pki_info()
       local info = json.decode(body)
@@ -459,7 +462,9 @@ end
 function refresh_cert()
   noit.log("error", "Circonus certificate refresh\n")
   while true do
-    local code, body = get_agent_info(get_subject())
+    local subj = get_subject()
+    if subj == nil then break end
+    local code, body = get_agent_info(subj)
     if code == 200 then
       local pki_info = pki_info()
       local info = json.decode(body)
