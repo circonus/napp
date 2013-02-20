@@ -249,7 +249,8 @@ end
 
 function needs_pki()
   local d = pki_info()
-  if (d["crl"].file == nil or d["crl"].exists) and d["ca"].exists then return false, d end
+  if (d["crl"].file == nil or d["crl"].exists) and
+     d["key"].exists and d["ca"].exists then return false, d end
   return true, d
 end
 

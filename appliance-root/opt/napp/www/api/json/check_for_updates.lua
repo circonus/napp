@@ -9,6 +9,7 @@ local packages = {}
 if out ~= nil then
   while true do
     local line = out:read("\n")
+    if line == nil then break end
     local name, version, source = line:match("([^%s]+)%s+([^%s]+)%s+(.+)")
     if name ~= nil and version ~= nil and source ~= nil then
       packages[# packages] = { name=name, version=version, source=source }
