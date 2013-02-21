@@ -133,7 +133,7 @@ noit.log("error", "Fetching -> " .. try_url .. "\n")
     end
     return false, error
   end
-  return false, type .. " not supported on this broker"
+  return true, type .. " not supported on this broker"
 end
 
 function proxy_post(url, keys, form)

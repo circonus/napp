@@ -33,22 +33,22 @@ http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
           </fieldset>
           <div id="pki-progress">
             <ul>
-              <li id="pki-key-ready" class="pending">Private Key</li>
-              <li id="pki-ca-ready"  class="pending">Certificate Authority</li>
-              <li id="pki-crl-ready"  class="pending">Certificate Revocation List</li>
+              <li id="pki-key-ready" class="pending"><div><span class="state"><span class="lock-label">Private Key</span></span></div></li>
+              <li id="pki-ca-ready"  class="pending"><div><span class="state"><span class="lock-label">Certificate Authority</span></span></div></li>
+              <li id="pki-crl-ready"  class="pending"><div><span class="state"><span class="lock-label">Certificate Revocation List</span></span></div></li>
             </ul>
           </div>
         </form>
       </div>
       <div id="provision-step">
-        <a href="/provision]=])
+        <button onclick="javascript:document.location='/provision]=])
 if inside() then
   http:write("#inside")
 end
-http:write([=[">Provision this Broker</a>
+http:write([=[';">Provision this Broker</button>
       </div>
       <div id="dash-step">
-        <a href="/dash">Go the Broker's Dashboard</a>
+        <button onclick="javascript:document.location='/dash';">Go to the Broker's Dashboard &raquo;</button>
       </div>
     </div>
     </div>

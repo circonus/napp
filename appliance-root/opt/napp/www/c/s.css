@@ -13306,6 +13306,9 @@ span.ws-date {
 }
 #provision-step,
 #dash-step {
+  margin-top:1em;
+  width:100%;
+  text-align:right;
   display:none;
 }
 .enterprise #login_form label {
@@ -13324,38 +13327,56 @@ span.ws-date {
 fieldset#pki {
     display: none;
 }
+div#pki-progress {
+    text-align:center;
+    margin-left:-22px;
+}
+#pki-progress li span {
+}
 #pki-progress li {
-    display: absolute;
+    display: inline;
+    list-style-type: none;
+}
+#pki-progress li div {
+    display: inline-block;
     width: 330px;
-    text-align: center;
-    margin-left: 333px;
-    margin-top: -1em;
+    height: 300px;
+    background: transparent url(../i/present/unlocked.png) no-repeat scroll -22 0;
 }
-#pki-progress li.pending {
-    background: #aaf;
+#pki-progress li span.state {
+  position: absolute;
+  margin-left: -135px;
+  width: 300px;
+  height: 170px;
+  margin-top: 125px;
+  text-align: center;
 }
-#pki-progress li.exists {
-    background: green;
+#pki-progress li span.lock-label {
+  position: absolute;
+  font-size: 144%;
+  margin-left: -65px;
+  width: 130px;
+  margin-top: 0px;
+  text-align: center;
 }
-#pki-progress li.progress {
-    background: yellow;
+#pki-progress li.pending div {
+    background: transparent url(../i/present/unlocked.png) no-repeat scroll -22 0;
 }
-#pki-progress li.missing {
-    background: red;
+#pki-progress li.exists div {
+    background: transparent url(../i/present/locked.png) no-repeat scroll -22 0;
 }
-#pki-progress li.na {
-    background: grey;
+#pki-progress li.progress div {
+    background: transparent url(../i/present/unlocked.png) no-repeat scroll -22 0;
+}
+#pki-progress li.missing div {
+    background: transparent url(../i/present/unlocked.png) no-repeat scroll -22 0;
+}
+#pki-progress li.na div {
+    background: transparent url(../i/present/unlocked-na.png) no-repeat scroll -22 0;
 }
 #pki-progress li:first-child {
-    display: absolute;
-    width: 330px;
-    margin-left: 0;
-    margin-top: 0;
 }
 #pki-progress li:last-child {
-    display: absolute;
-    width: 330px;
-    margin-left: 666px;
 }
 .enterprise #circonus-pki {
     -moz-border-radius: 0.6154em;
