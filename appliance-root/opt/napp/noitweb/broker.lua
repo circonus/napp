@@ -353,8 +353,18 @@ function lua_embed(rest, file, st)
   local data = inp:read("*all")
   inp:close();
 
-  local f,e = assert(loadstring("return function(http)\n" .. data .. "\nend\n"))
-  setfenv(f, getfenv(2))
+  local loader = function(str)
+    local cnt = 1
+    return function()
+      if cnt == 1 then
+        cnt = 0
+        return "return function(http)\n" .. str .. "\nend\n"
+      end
+      return nil
+    end
+  end
+
+  local f,e = assert(load(loader(data), file, "bt", _ENV))
   f = f()
 
   http:status(200, "OK")
