@@ -447,7 +447,8 @@ end
 function do_periodically(f, period)
   return function()
     while true do
-      pcall(f)
+      local rv, err = pcall(f)
+      if not rv then noit.log("error", "lua --> " .. err .. "\n") end
       noit.sleep(period)
     end
   end
