@@ -444,6 +444,9 @@ function do_periodically(f, period)
 end
 
 function write_contents_if_changed(file, body, mode)
+  if mode == nil then
+     mode = tonumber(0644, 8)
+  end
   local inp = io.open(file, "rb")
   if inp ~= nil then
     local data = inp:read("*all")
