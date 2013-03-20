@@ -133,7 +133,7 @@ noit.log("error", "Fetching -> " .. try_url .. "\n")
     end
     return false, error
   end
-  return false, type .. " not supported on this broker"
+  return true, type .. " not supported on this broker"
 end
 
 function proxy_post(url, keys, form)
@@ -353,8 +353,18 @@ function lua_embed(rest, file, st)
   local data = inp:read("*all")
   inp:close();
 
-  local f,e = assert(loadstring("return function(http)\n" .. data .. "\nend\n"))
-  setfenv(f, getfenv(2))
+  local loader = function(str)
+    local cnt = 1
+    return function()
+      if cnt == 1 then
+        cnt = 0
+        return "return function(http)\n" .. str .. "\nend\n"
+      end
+      return nil
+    end
+  end
+
+  local f,e = assert(load(loader(data), file, "bt", _ENV))
   f = f()
 
   http:status(200, "OK")
@@ -437,7 +447,8 @@ end
 function do_periodically(f, period)
   return function()
     while true do
-      pcall(f)
+      local rv, err = pcall(f)
+      if not rv then noit.log("error", "lua --> " .. err .. "\n") end
       noit.sleep(period)
     end
   end
