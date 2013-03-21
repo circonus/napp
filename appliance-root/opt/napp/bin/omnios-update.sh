@@ -49,14 +49,6 @@ restore_svc_state() {
 	fi
 }
 
-web_init() {
-	if [ ! -r /opt/napp/etc/django-stuff/napp_stub.sqlite ]; then
-		echo "Initializing web interface"
-		cp -p /opt/napp/etc/django-stuff/napp_stub.sqlite.factory \
-			/opt/napp/etc/django-stuff/napp_stub.sqlite
-	fi
-}
-
 noit_init() {
 	if [ ! -r /opt/noit/prod/etc/noit.conf ]; then
 		echo "Initializing noit"
@@ -69,14 +61,11 @@ configure_publishers
 record_svc_state jezebel
 record_svc_state unbound
 record_svc_state noitd
-record_svc_state napp
 
 /usr/bin/pkg install napp-incorporation || bomb "Error: pkg installation failed"
 
-web_init
 noit_init
 
 restore_svc_state jezebel
 restore_svc_state unbound
 restore_svc_state noitd
-restore_svc_state napp

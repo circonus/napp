@@ -38,14 +38,6 @@ restore_svc_state() {
 	fi
 }
 
-web_init() {
-	if [ ! -r /opt/napp/etc/django-stuff/napp_stub.sqlite ]; then
-		echo "initializing web interface"
-		cp -p /opt/napp/etc/django-stuff/napp_stub.sqlite.factory \
-			/opt/napp/etc/django-stuff/napp_stub.sqlite
-	fi
-}
-
 noit_init() {
 	if [ ! -r /opt/noit/prod/etc/noit.conf ]; then
 		echo "initializing noit"
@@ -86,13 +78,11 @@ if [ "$NO_UPDATES" = "0" ]; then
 	record_svc_state jezebel
 	record_svc_state unbound
 	record_svc_state noitd
-	record_svc_state napp
 fi
 
 handle_packages `$CURL -s $BASE/ea.pkgs`
 
 if [ "$NO_UPDATES" = "0" ]; then
-	web_init
 	noit_init
 fi
 
@@ -102,5 +92,4 @@ elif [ "$NO_UPDATES" = "0" ]; then
 	restore_svc_state jezebel
 	restore_svc_state unbound
 	restore_svc_state noitd
-	restore_svc_state napp
 fi
