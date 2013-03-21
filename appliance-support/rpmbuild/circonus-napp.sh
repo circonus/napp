@@ -4,16 +4,25 @@ RELMAJOR=`cat /etc/redhat-release | awk '{ print substr($3,0,1) }'`
 
 # check permissions
 if [ "x$RELMAJOR" == "x5" ]; then
-    for i in `find /mnt/circonus/i386 -not -user mocker`; do
+    for i in `find /mnt/circonus/centos/${RELMAJOR}/i386 -not -user mocker`; do
        test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
     done
 fi
 
-for i in `find /mnt/circonus/x86_64 -not -user mocker`; do
+for i in `find /mnt/circonus/centos/${RELMAJOR}/x86_64 -not -user mocker`; do
    test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
 done
 
 NAME=circonus-napp
+
+# This is used to set the dist macro in rpmbuild and mock
+# CentOS 5 buildsys-macros sets %{dist} to ".el5.centos" and we just want ".el5"
+if [ "x$RELMAJOR" == "x5" ]; then
+   DIST=".el5"
+else
+   DIST=$(rpm -E %{?dist})
+fi
+
 TOPDIR=$(rpm -E %{_topdir})
 
 rm -rf ${TOPDIR}/BUILD/napp \
@@ -76,8 +85,11 @@ Requires(preun): chkconfig, sed
 Requires(preun): initscripts
 # for /bin/rm
 Requires(preun): coreutils
-Requires:	mod_wsgi, noit_prod, python-sqlite2, curl, httpd
+Requires:	mod_wsgi, noit_prod, python-sqlite2, m2crypto, curl, httpd
 
+%if 0%{?rhel} == 6
+Requires:	policycoreutils-python
+%endif
 
 %description
 Napp is a package with Enterprise Appliance files
@@ -170,6 +182,8 @@ fi
 
 
 %changelog
+* Fri Aug 10 2012 Eric Sproul <esproul@omniti.com> - 0.1r1339085555-0.2
+- fix dependency for el6, add dist name
 * Fri Aug 12 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.2
 - fix typo
 * Mon May 23 2011 Sergey Ivanov <seriv@omniti.com> - 0.1r8614-0.1
@@ -197,6 +211,7 @@ fi
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
 - Initial package.
 EOF
+
 rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" --define "dist $DIST" $SPECFILE 
 
 if [ "x$RELMAJOR" == "x5" ]; then

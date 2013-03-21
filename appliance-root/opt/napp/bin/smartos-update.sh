@@ -1,18 +1,17 @@
 #!/bin/sh
 
+NO_UPDATES=0
+if [ "$1" = "-n" ]; then
+	NO_UPDATES=1
+fi
 CURL=/opt/omni/bin/curl
 test -x $CURL || CURL=/opt/local/bin/curl
 test -x $CURL || CURL=curl
-BASE=http://updates.circonus.com/joyent/5.11
+BASE=http://updates.circonus.com/joyent/smartos
 UPDATES_AVAILABLE=0
 if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
 fi
-
-bail() {
-	echo "$@"
-	exit 1
-}
 
 record_svc_state() {
 	STATE=`/usr/bin/svcs -H -o state $1`
@@ -48,56 +47,48 @@ noit_init() {
 }
 
 handle_packages() {
-	echo "Downloading package list."
 	while [ -n "$*" ];
 	do
 		pkg=$1
 		ver=$2
 		file=$3
 		shift 3
-		cver=`pkginfo -l $pkg 2>&1 | awk '{if($1 == "VERSION:") { print $2;}}'`
-		dldir=/var/tmp/circonus
+		cver=`pkg_info $pkg-\* 2>&1 | sed -e "s/$pkg-/:/" | awk -F: '/Information/ {print $2;}'`
 		if [ "$ver" != "$cver" ]; then
 			UPDATES_AVAILABLE=1
-			if [ ! -d $dldir ]; then
-				echo "preparing download directory"
-				mkdir $dldir || \
-					bail "failed to create download directory: $dldir"
-			fi
-			echo "downloading $BASE/$file"
-			$CURL -s -o $dldir/$file $BASE/$file || \
-				bail "Download failed.  Tried $BASE/$file"
 			if [ -n "$cver" ]; then
-				echo "removing $pkg"
-				yes | /usr/sbin/pkgrm $pkg
+				echo "removing $pkg ($cver -> $ver)"
+                                if [ "$NO_UPDATES" = "0" ]; then
+					yes | /opt/local/sbin/pkg_delete -f $pkg-$cver
+				fi
 			fi
 			if [ -n "$ver" ]; then
-				echo "adding $pkg from $file"
-				yes | /usr/sbin/pkgadd -d $dldir/$file all
+				echo "$pkg $ver circonus"
+                                if [ "$NO_UPDATES" = "0" ]; then
+					yes | /opt/local/sbin/pkg_add -f $BASE/$pkg.tgz
+				fi
+			else
+				echo "$pkg (remove) circonus"
 			fi
 		fi
 	done
-	echo ""
-	echo "Feel free to delete files in $dldir if you wish."
-	echo ""
 }
 
-record_svc_state jezebel
-record_svc_state unbound
-record_svc_state noitd
-
-pkglist=`$CURL -s $BASE/ea.pkgs`
-if [ `echo $pkglist | awk '{ print substr($0,0,4)}'` != "OMNI" ]; then
-	bail "Package list doesn't look right.  Fetched $BASE/ea.pkgs"
+if [ "$NO_UPDATES" = "0" ]; then
+	record_svc_state jezebel
+	record_svc_state unbound
+	record_svc_state noitd
 fi
 
-handle_packages $pkglist
+handle_packages `$CURL -s $BASE/ea.pkgs`
 
-noit_init
+if [ "$NO_UPDATES" = "0" ]; then
+	noit_init
+fi
 
 if [ "$UPDATES_AVAILABLE" = "0" ]; then
 	echo "No updates."
-else
+elif [ "$NO_UPDATES" = "0" ]; then
 	restore_svc_state jezebel
 	restore_svc_state unbound
 	restore_svc_state noitd

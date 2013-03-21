@@ -10,11 +10,15 @@ do
 		break
 	fi
 done
-BASE=http://updates.circonus.com/joyent/5.11
+BASE=http://updates.circonus.com/joyent/smartos
 UPDATES_AVAILABLE=0
 if [ -r /opt/napp/etc/napp.override ]; then
 	. /opt/napp/etc/napp.override
 fi
+
+PKGIN=/opt/local/bin/pkgin
+GREP=/opt/local/bin/grep
+AWK=/opt/local/bin/awk
 
 handle_packages() {
 	while [ -n "$*" ];
@@ -23,7 +27,7 @@ handle_packages() {
 		ver=$2
 		file=$3
 		shift 3
-		cver=`pkginfo -l $pkg 2>&1 | awk '{if($1 == "VERSION:") { print $2;}}'`
+		cver=`$PKGIN list | $GREP -E ^$pkg- | $AWK "{ print substr(\\\$1, length(\"$pkg\")+2); }"`
 		if [ "$ver" != "$cver" ]; then
 			UPDATES_AVAILABLE=1
 			if [ -n "$cver" ]; then

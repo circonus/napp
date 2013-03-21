@@ -13,6 +13,8 @@ jQuery(function ($)
 
     $form.bind("submit", step1);
     $login.bind("click", step1);
+    if(document.location.hash == "#inside")
+      $("#login_form .inside").show();
 
     function step1(e)
     {
@@ -142,22 +144,36 @@ jQuery(function ($)
     function step3(e)
     {
         var id = $account.val(),
-            hidden_vals = ["country_code", "state_prov", "account_name"];
+            country_code = accounts[id]['country_code'] ? accounts[id]['country_code'] : '??',
+            state_prov = accounts[id]['state_prov'] ? accounts[id]['state_prov'] : '??',
+            account_name = accounts[id]['account_name'] ? accounts[id]['account_name'] : '??';
 
-        $.each(hidden_vals, function (i, hide)
-        {
-            var $hidden = $("<input>")
-                    .attr({
-                        type: "hidden",
-                        name: hide,
-                        value: accounts[id][hide] 
-                            ? accounts[id][hide] 
-                            : '??'
-                    });
-    
-            $form.append($hidden);
+        $.ajax({ 
+            url: "/api/json/submit_csr",
+            type: "POST",
+            dataType: "json",
+            data: {
+                email: $email.val(), 
+                password: $pass.val(), 
+                account: id,
+                cn: $('input[name="cn"]').val(),
+                country_code: country_code,
+                state_prov: state_prov,
+                account_name: account_name
+            },
+            success: function (data, status, request)
+            {
+                if(data.status == "success") document.location = "/await_provisioning";
+                else {
+                  alert(data.error || 'Error submitting CSR to Circonus');
+                }
+            },
+            error: function (request, status, error)
+            {
+                alert(error);
+            }
         });
-
+        return false;
     }
 
 });
