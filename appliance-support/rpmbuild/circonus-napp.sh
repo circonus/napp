@@ -1,8 +1,14 @@
 #!/bin/sh
+
+RELMAJOR=`cat /etc/redhat-release | awk '{ print substr($3,0,1) }'`
+
 # check permissions
-for i in `find /mnt/circonus/i386 -not -user mocker`; do
-   test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
-done
+if [ "x$RELMAJOR" == "x5" ]; then
+    for i in `find /mnt/circonus/i386 -not -user mocker`; do
+       test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
+    done
+fi
+
 for i in `find /mnt/circonus/x86_64 -not -user mocker`; do
    test -w $i || echo "fix ownership/permissions for <$i>" && exit 1
 done
@@ -20,20 +26,22 @@ if [ -z "$REV2" ]; then
   REV2=`(cd ${TOPDIR}/BUILD/napp && git show --format=%at | head -1)`
 fi
 
+# This is used to set the dist macro in rpmbuild and mock
+# CentOS 5 buildsys-macros sets %{dist} to ".el5.centos" and we just want ".el5"
+if [ "x$RELMAJOR" == "x5" ]; then
+   DIST=".el5"
+else
+   DIST=$(rpm -E %{?dist})
+fi
+
 VERSION="0.1r$REV"
 VERSION2="0.1r$REV2"
-
-rm -rf ${TOPDIR}/BUILD/circonus-www \
- && git clone src@src.omniti.com:~circonus/web/service ${TOPDIR}/BUILD/circonus-www
 
 SRCFILE=${TOPDIR}/SOURCES/${NAME}-${VERSION}.tar.gz
 SPECFILE=${TOPDIR}/SPECS/${NAME}.spec
 rm -rf ${TOPDIR}/BUILD/${NAME}-${VERSION} ${SRCFILE} \
  && mv ${TOPDIR}/BUILD/napp/appliance-root ${TOPDIR}/BUILD/${NAME}-${VERSION} \
  && mkdir ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/etc/updatelogs \
- && mv ${TOPDIR}/BUILD/circonus-www/htdocs/c ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
- && mv ${TOPDIR}/BUILD/circonus-www/htdocs/i ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
- && mv ${TOPDIR}/BUILD/circonus-www/htdocs/s ${TOPDIR}/BUILD/${NAME}-${VERSION}/opt/napp/www/ \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRCFILE} ${NAME}-${VERSION})
 NAME2=circonus-selinux-module
 SRC2FILE=${TOPDIR}/SOURCES/${NAME2}-${VERSION2}.tar.gz
@@ -47,7 +55,7 @@ sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF
 %define		rrelease	0.2
 Name:		circonus-napp
 Version:	%{rversion}
-Release:	%{rrelease}
+Release:	%{rrelease}%{?dist}
 Summary:	napp
 
 Group:		Applications/System
@@ -95,17 +103,8 @@ rm -rf %{name}-%{rversion}
 %{__rm} -rf \$RPM_BUILD_ROOT
 %{__mkdir} \$RPM_BUILD_ROOT
 %{__cp} -pr opt \$RPM_BUILD_ROOT
-%{__mkdir_p} \$RPM_BUILD_ROOT/etc/cron.d
-%{__mkdir_p} \$RPM_BUILD_ROOT/etc/cron.daily
-%{__cp} -p etc/cron.d/napp \$RPM_BUILD_ROOT/etc/cron.d
-%{__ln_s} /opt/napp/bin/crt-refresh \$RPM_BUILD_ROOT/etc/cron.daily
-%{__mkdir_p} \$RPM_BUILD_ROOT%{_initrddir}
-%{__ln_s} /opt/napp/bin/issue-refresh \$RPM_BUILD_ROOT%{_initrddir}
-%{__ln_s} /opt/napp/bin/noitd-ctlr \$RPM_BUILD_ROOT%{_initrddir}
-%{__install} -m 0755 %SOURCE2 \$RPM_BUILD_ROOT/opt/napp/bin/napp-httpd
 %{__mkdir_p} \$RPM_BUILD_ROOT/opt/napp/selinux
 %{__install} -m 0755 circonus-selinux-module/selinux/napp.pp \$RPM_BUILD_ROOT/opt/napp/selinux/napp.pp
-%{__ln_s} /opt/napp/bin/napp-httpd \$RPM_BUILD_ROOT%{_initrddir}
 ( cd \$RPM_BUILD_ROOT; find . -type d -name '.svn' | xargs rm -rf )
 
 
@@ -120,17 +119,6 @@ fi
 
 
 %post
-if [ \$1 = 1 ]; then
-  /sbin/chkconfig --add noitd-ctlr
-  /sbin/chkconfig --add napp-httpd
-  /sbin/chkconfig --add issue-refresh
-  if test -f /opt/napp/etc/noit.run; then 
-     /sbin/service noitd-ctlr stop
-     /sbin/service noitd-ctlr start
-  fi
-  /sbin/service napp-httpd condrestart
-  /sbin/service issue-refresh start
-fi
 if test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled; then
   semodule -i /opt/napp/selinux/napp.pp
   restorecon -r /opt/napp/etc
@@ -160,10 +148,7 @@ fi
 
 %files
 %defattr(-,root,root,-)
-%dir %{_initrddir}
 %dir /opt
-%dir /opt/django
-/opt/django/*
 %dir /opt/noit
 %dir /opt/noit/prod
 %dir /opt/noit/prod/etc/
@@ -172,32 +157,15 @@ fi
 %dir /opt/napp
 %attr(0755,nobody,root) %dir /opt/napp/etc
 %attr(0755,nobody,root) /opt/napp/etc/check-for-updates
-%attr(0755,nobody,root) %dir /opt/napp/etc/django-stuff
 %attr(0755,nobody,root) %dir /opt/napp/etc/ssl
-%attr(0755,nobody,root) %dir /opt/napp/etc/updatelogs
-%attr(0644,nobody,root) /opt/napp/etc/django-stuff/napp_stub.sqlite.factory
-%config(noreplace) %attr(0644,nobody,root) /opt/napp/etc/django-stuff/napp_stub.sqlite
-%attr(0644,nobody,root) /opt/napp/etc/httpd.conf
-%attr(0644,nobody,root) /opt/napp/etc/napp-openssl.cnf
-%dir /opt/napp/base
 %dir /opt/napp/bin
-%dir /opt/napp/setup
-%dir /opt/napp/templates
+%dir /opt/napp/noitweb
 %dir /opt/napp/www
-/opt/napp/base/*
 /opt/napp/bin/*
-/opt/napp/setup/*
-/opt/napp/templates/*
+/opt/napp/noitweb/*
 /opt/napp/www/*
-/opt/napp/*.py*
-/opt/napp/napp.wsgi
-/opt/napp/stub
+/opt/napp/etc/*
 /opt/napp/etc/ssl/ca.crt
-/etc/rc.d/init.d/noitd-ctlr
-/etc/rc.d/init.d/napp-httpd
-/etc/rc.d/init.d/issue-refresh
-/etc/cron.d/napp
-/etc/cron.daily/crt-refresh
 /opt/napp/selinux/napp.pp
 
 
@@ -229,9 +197,16 @@ fi
 * Wed Mar 10 2010 Sergey Ivanov <seriv@omniti.com> - 0.1r3711-0.1
 - Initial package.
 EOF
-rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" $SPECFILE 
-mock -r circonus-5-i386 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-i386/result/${NAME}-${VERSION}-0.2.i386.rpm /mnt/circonus/i386/RPMS/
-mock -r circonus-5-x86_64 ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2.src.rpm
-cp /var/lib/mock/circonus-5-x86_64/result/${NAME}-${VERSION}-0.2.x86_64.rpm /mnt/circonus/x86_64/RPMS/
-/mnt/make-repo-metadata /mnt/circonus/
+rpmbuild -bs --define "_source_filedigest_algorithm md5"  --define "_binary_filedigest_algorithm md5" --define "dist $DIST" $SPECFILE 
+
+if [ "x$RELMAJOR" == "x5" ]; then
+    echo "Mocking: mock -r circonus-${RELMAJOR}-i386 --define=\"dist $DIST\" ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm"
+    mock -r circonus-${RELMAJOR}-i386 --define="dist $DIST" ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm
+    cp /var/lib/mock/circonus-${RELMAJOR}-i386/result/${NAME}-${VERSION}-0.2${DIST}.i386.rpm /mnt/circonus/centos/${RELMAJOR}/i386/RPMS/
+fi
+
+echo "Mocking: mock -r circonus-${RELMAJOR}-x86_64 --define=\"dist $DIST\" ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm"
+mock -r circonus-${RELMAJOR}-x86_64 --define="dist $DIST" ${TOPDIR}/SRPMS/${NAME}-${VERSION}-0.2${DIST}.src.rpm
+cp /var/lib/mock/circonus-${RELMAJOR}-x86_64/result/${NAME}-${VERSION}-0.2${DIST}.x86_64.rpm /mnt/circonus/centos/${RELMAJOR}/x86_64/RPMS/
+
+/mnt/make-repo-metadata /mnt/circonus/centos/${RELMAJOR}
