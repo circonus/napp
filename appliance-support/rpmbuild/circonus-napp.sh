@@ -85,11 +85,7 @@ Requires(preun): chkconfig, sed
 Requires(preun): initscripts
 # for /bin/rm
 Requires(preun): coreutils
-Requires:	mod_wsgi, noit_prod, python-sqlite2, m2crypto, curl, httpd
-
-%if 0%{?rhel} == 6
-Requires:	policycoreutils-python
-%endif
+Requires:	noit_prod
 
 %description
 Napp is a package with Enterprise Appliance files
