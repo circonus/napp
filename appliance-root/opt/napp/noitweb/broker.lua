@@ -226,7 +226,7 @@ function inside()
 end
 
 function circonus_url()
-  return noit.conf_get_string("/noit/circonus/appliance/circonus_url") or "https://circonus.com"
+  return noit.conf_get_string("/noit/circonus/appliance/circonus_url") or "https://login.circonus.com"
 end
 
 function pki_info()
