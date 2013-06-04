@@ -156,7 +156,7 @@ jQuery(function ($)
                 email: $email.val(), 
                 password: $pass.val(), 
                 account: id,
-                cn: $('input[name="cn"]').val(),
+                cn: $('input[name="cn"]:checked').val(),
                 country_code: country_code,
                 state_prov: state_prov,
                 account_name: account_name
