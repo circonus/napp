@@ -26,7 +26,11 @@ jQuery(function ($) {
           else $('#dash-step').show();
         } else {
           $('#fetch').unbind("click");
-          $('#fetch').bind("click", step);
+          if(document.location.hash == "#inside") {
+            $('#fetch').bind("click", reconfigure);
+          } else {
+            $('#fetch').bind("click", step);
+          }
         }
       },
       error: function (request, status, error) {
