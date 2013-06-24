@@ -484,18 +484,21 @@ function refresh_cert()
   noit.log("error", "Circonus certificate refresh\n")
   while true do
     local subj = get_subject()
-    if subj == nil then break end
-    local code, body = get_agent_info(subj)
-    if code == 200 then
-      local pki_info = pki_info()
-      local info = json.decode(body)
-      if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
-        write_contents_if_changed(pki_info.cert.file, info.cert)
+    if subj == nil then
+      noit.log("debug", "No subject set (yet)\n")
+    else
+      local code, body = get_agent_info(subj)
+      if code == 200 then
+        local pki_info = pki_info()
+        local info = json.decode(body)
+        if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
+          write_contents_if_changed(pki_info.cert.file, info.cert)
+        end
       end
+      local info = pki_info()
+      if info.cert.exists then break end
+      noit.log("error", "Circonus certificate non-existent, polling(5)\n")
     end
-    local info = pki_info()
-    if info.cert.exists then break end
-    noit.log("error", "Circonus certificate non-existent, polling(5)\n")
     noit.sleep(5)
   end
 end
