@@ -429,7 +429,12 @@ function handler(rest, config)
   local file = config.webroot .. req:uri()
 
   if config.should_ssl == "true" and not needs_certificate() then
-    redirect(http, "https://" .. host .. ":43191" .. req:uri())
+    local redirect_host = host
+    local hostwoport, aport = host:match("^(.*):(%d+)$")
+    if (hostwoport ~= nil) then
+      redirect_host = hostwoport
+    end
+    redirect(http, "https://" .. redirect_host .. ":43191" .. req:uri())
   end
 
   if file:match("/$") then file = file .. "index" end
