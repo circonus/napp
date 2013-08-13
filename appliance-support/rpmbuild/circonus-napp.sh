@@ -58,7 +58,6 @@ rm -rf ${TOPDIR}/BUILD/${NAME2} ${SRC2FILE} \
  && mv ${TOPDIR}/BUILD/napp/appliance-support ${TOPDIR}/BUILD/${NAME2} \
  && (cd ${TOPDIR}/BUILD/ && tar zcf ${SRC2FILE} ${NAME2})
 cp `dirname $0`/napp-httpd ${TOPDIR}/SOURCES/
-cp `dirname $0`/issue-refresh-initscript.patch ${TOPDIR}/SOURCES/
 sed -e "s/@@REV@@/$REV/" -e "s/@@REV2@@/$REV2/" -e "s/@@DEPLOY@@/$DEPLOY/" <<EOF  > $SPECFILE
 %define		rversion	0.1r@@REV@@
 %define		rrelease	0.2
@@ -75,7 +74,6 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Source:		$NAME-$VERSION.tar.gz
 Source1:	$NAME2-$VERSION2.tar.gz
 Source2:	napp-httpd
-Patch1:		issue-refresh-initscript.patch
 
 BuildRequires:	rpm, coreutils, checkpolicy, policycoreutils
 Requires(pre):	chkconfig

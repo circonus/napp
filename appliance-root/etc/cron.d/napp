@@ -1,2 +1,0 @@
-* * * * * root /opt/napp/bin/issue-refresh > /dev/null 2>&1
-* * * * * root /opt/napp/bin/perform-updates > /dev/null 2>&1
