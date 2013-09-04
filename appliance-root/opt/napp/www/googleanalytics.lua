@@ -82,12 +82,12 @@ http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
                     Please enter the Client ID, Client Secret, and API Key associated with your Google API account below. This will allow your agent to communicate via your Google API account for Google Analytics checks.
           </p>
           <br style="clear:both"/>
-            <form id="login_form" method="POST">
+            <form id="analytics_form" method="POST">
               <p><label for="id_clientid">Client ID:</label> <input id="id_clientid" type="text" name="client_id" maxlength="500" value="]=])
 http:write(client_id)
 http:write([=["/>
               </p>
-              <p><label for="id_clientsec">Client Secret:</label> <input id="id_clientsec" type="text" name="client_secret" maxlength="500" value="]=])
+              <p><label for="id_clientsecret">Client Secret:</label> <input id="id_clientsecret" type="text" name="client_secret" maxlength="500" value="]=])
 http:write(client_secret)
 http:write([=["/>
               </p>
