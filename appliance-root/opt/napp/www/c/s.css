@@ -13268,6 +13268,27 @@ span.ws-date {
     text-align: right;
     width: 19.875em;
 }
+    .enterprise #googleanalytics {
+        float: left;
+        padding: 2.5em 0 0 5em;
+        text-align: left;
+    }
+    .enterprise #googleanalytics input[type="text"],
+    .enterprise #googleanalytics input[type="password"] {
+        width: 40%;
+    }
+    .enterprise #googleanalytics input[type="submit"] {
+        float: left;
+        margin-top: 2em;
+    }
+    .enterprise #googleanalytics label {
+        color: #74797B;
+        display: block;
+        font-size: 0.8125em;
+        line-height: 1.4;
+        text-align: left;
+        width: 100%;
+    }
     .enterprise #userlogin input[type="text"],
     .enterprise #userlogin input[type="password"] {
         width: 100%;
