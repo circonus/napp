@@ -113,7 +113,8 @@ http:write([=["/>
 http:write(api_key)
 http:write([=["/>
               </p>
-              <input type="submit" value="Submit &raquo;" />
+              <button type="button" onclick="javascript:document.location='/dash';">&laquo; Go back to the Dashboard</button>
+              <button type="submit"">Submit Data &raquo;</button>
             </form>
           </div>
         </div>
