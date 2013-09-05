@@ -1,4 +1,10 @@
 local req = http:request()
+
+local inside = noit.conf_get_boolean('/noit/circonus/appliance/inside')
+if inside == nil or inside == '' then inside = false end
+
+if inside == false then redirect(http, "/") end
+
 local client_id = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/client_id')
 local client_secret = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/client_secret')
 local api_key = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/api_key')
