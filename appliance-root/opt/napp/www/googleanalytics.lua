@@ -13,10 +13,13 @@ if client_id == nil then client_id = '' end
 if client_secret == nil then client_secret = '' end
 if api_key == nil then api_key = '' end
 
+local updated = false;
+
 if req:method() == "POST" then
   local form = req:form()
 
   if type(form['client_id']) ~= 'boolean' and form['client_id'] ~= nil and form['client_id'] ~= '' then
+    updated = true
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m1"]/include/config/client_id',
                                       form['client_id'])
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m2"]/include/config/client_id',
@@ -33,6 +36,7 @@ if req:method() == "POST" then
                                       form['client_id'])
   end
   if type(form['client_secret']) ~= 'boolean' and form['client_secret'] ~= nil and form['client_secret'] ~= '' then
+    updated = true
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m1"]/include/config/client_secret',
                                       form['client_secret'])
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m2"]/include/config/client_secret',
@@ -49,6 +53,7 @@ if req:method() == "POST" then
                                       form['client_secret'])
   end
   if type(form['api_key']) ~= 'boolean' and form['api_key'] ~= nil and form['api_key'] ~= '' then
+    updated = true
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m1"]/include/config/api_key',
                                       form['api_key'])
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m2"]/include/config/api_key',
@@ -64,7 +69,14 @@ if req:method() == "POST" then
     noit.conf_replace_string('/noit/modules/include/lua/module[@name="googleanalytics:m7"]/include/config/api_key',
                                       form['api_key'])
   end
-  error("Google Analytics values updated. Please restart your broker.")
+
+  client_id = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/client_id')
+  client_secret = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/client_secret')
+  api_key = noit.conf_get_string('/noit/modules//lua/module[@name="googleanalytics:m7"]//config/api_key')
+
+  if client_id == nil then client_id = '' end
+  if client_secret == nil then client_secret = '' end
+  if api_key == nil then api_key = '' end
 end
 
 http:write([=[<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -108,7 +120,15 @@ http:write([=["/>
       </div>
     </div>
     <script src="/js/jquery.min.js" type="text/javascript"></script>
-    <script src="/js/googleanalytics.js" type="text/javascript"></script>
+    <script src="/js/googleanalytics.js" type="text/javascript"></script>]=])
+if updated == true then
+  http:write([=[
+    <script type="text/javascript">
+      alert("Google Analytics values updated. Please restart your broker for the changes to take effect.");
+    </script>
+  ]=])
+end
+http:write([=[
   </body>
 </html>
 ]=])
