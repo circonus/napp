@@ -1,3 +1,6 @@
+local inside = noit.conf_get_boolean('/noit/circonus/appliance/inside')
+if inside == nil or inside == '' then inside = false end
+
 http:write([=[<html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -38,6 +41,12 @@ http:write([=[<html>
 				padding:6px 0;
 			}
 			#updates_panel li span.package-version { float:right; }
+			#config_panel li{
+				border-bottom:1px dashed #E7E8E8;
+				font-size:0.8125em;
+				padding:6px 0;
+			}
+			#config_panel li span.package-version { float:right; }
 			
 			button#perform_updates {
 				background:url("../i/present/update-btn.png") no-repeat scroll 167px 5px #E7E8E8;
@@ -155,8 +164,16 @@ http:write([=[<html>
         <p id="logs_panel">
         </p>
        </div> 
-        <div class="content-col narrow right">
-        	<div id="updates_panel" class="sub-container clear">
+        <div class="content-col narrow right">]=])
+if inside == true then
+http:write([=[ <div id="config_panel" class="sub-container clear">
+        		<h4 class="prefs-head">Inside Configuration </h4>
+                        <ul id="updates">
+                          <li><a href="/googleanalytics">Google Analytics</a></li>
+                        </ul>
+                </div>]=])
+end
+http:write([=[  <div id="updates_panel" class="sub-container clear">
         		<h4 class="prefs-head">Available Updates </h4>
             	<p id="updates_message">Looking for updates...</p>
         	</div>
