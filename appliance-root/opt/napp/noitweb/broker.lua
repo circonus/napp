@@ -425,6 +425,20 @@ function handler(rest, config)
   local req_headers = req:headers()
   local host = req:headers("Host")
   local uri = req:uri()
+  local extre = noit.pcre("\\.([^\\./]+)$")
+
+  if req:uri():match("^/debug/") then
+    local replacement_uri, hash = fix_stage(http)
+    if replacement_uri ~= nil and replacement_uri ~= req:uri() then
+      if hash then return redirect(http, replacement_uri .. '#' .. hash) end
+      return redirect(http, replacement_uri)
+    end
+    local file = "/opt/noit/prod/share/noit-web" .. req:uri():sub(7)
+    if file:match("/$") then file = file .. "/index.html" end
+    local rv, m, ext = extre(file)
+    serve(rest, config, file, ext)
+    return
+  end
 
   local file = config.webroot .. req:uri()
 
@@ -439,7 +453,6 @@ function handler(rest, config)
 
   if file:match("/$") then file = file .. "index" end
 
-  local extre = noit.pcre("\\.([^\\./]+)$")
   local rv, m, ext = extre(file)
 
   if not rv then
