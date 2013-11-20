@@ -33,7 +33,7 @@ function generate_csr(subject, csrfile)
   noit.close(fd)
   local p, inf, outf, errf = noit.spawn(
     "openssl", { 'openssl', 'req', '-key', pki.key.file,
-                 '-days', '365', '-new', '-out', pki.csr.file,
+                 '-sha1', '-days', '365', '-new', '-out', pki.csr.file,
                  '-config', '/opt/napp/etc/napp-openssl.cnf',
                  '-subj', subject}, {})
   local rv = p:wait()
