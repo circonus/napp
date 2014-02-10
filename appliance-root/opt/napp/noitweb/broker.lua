@@ -12,14 +12,19 @@ function new_session()
 end
 
 function generate_key(keyfile)
-  local p, inf, outf, errf = noit.spawn(
-    "openssl", { 'openssl', 'genrsa', '-out', keyfile, 2048 }, {})
-  local rv = p:wait()
-  if rv == 0 then
-    noit.chmod(keyfile, tonumber(0400, 8))
-    return rv
+  local rsa = crypto.newrsa()
+  if rsa == nil then
+    return -1, "keygen failed"
   end
-  return rv, errf:read("EOF")
+  local fd = noit.open(keyfile,
+                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0600,8))
+  if fd < 0 then
+    return fd, "Could not store broker private key"
+  end
+  noit.write(fd, rsa:pem())
+  noit.close(fd)
+  noit.chmod(keyfile, tonumber(0400, 8))
+  return 0
 end
 
 function generate_csr(subject, csrfile)
@@ -31,17 +36,28 @@ function generate_csr(subject, csrfile)
   end
   noit.write(fd, subject)
   noit.close(fd)
-  local p, inf, outf, errf = noit.spawn(
-    "openssl", { 'openssl', 'req', '-key', pki.key.file,
-                 '-sha1', '-days', '365', '-new', '-out', pki.csr.file,
-                 '-config', '/opt/napp/etc/napp-openssl.cnf',
-                 '-subj', subject}, {})
-  local rv = p:wait()
-  if rv == 0 then
-    noit.chmod(pki.csr.file, tonumber(0444, 8))
-    return rv
+
+  local inp = io.open(pki.key.file, "rb")
+  if inp == nil then return -1, "could not open private key" end
+  local keydata = inp:read("*all")
+  inp:close();
+  local key = crypto.newrsa(keydata)
+  if key == nil then return -1, "private key invalid" end
+  local subj = {}
+  for k, v in string.gmatch(subject, "(%w+)=([^/]+)") do
+    subj[k] = v
   end
-  return rv, errf:read("EOF")
+  local req = key:gencsr({ subject=subj })
+  
+  local fd = noit.open(pki.csr.file,
+                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0644,8))
+  if fd < 0 then
+    return fd, "Could not store broker CSR"
+  end
+  noit.write(fd, req:pem())
+  noit.close(fd)
+  noit.chmod(pki.csr.file, tonumber(0400, 8))
+  return 0
 end
 
 function get_subject()
