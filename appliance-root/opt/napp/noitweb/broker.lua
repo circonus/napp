@@ -65,7 +65,7 @@ function get_subject()
   if inp == nil then return nil end
   local data = inp:read("*all")
   inp:close();
-  local cn = data:match("CN=([^/]+)")
+  local cn = data:match("CN=([^/\n]+)")
   return cn
 end
 
