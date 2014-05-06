@@ -127,6 +127,7 @@ function fetchCA(type, new_pki_url)
   local url = circonus_url()
   local try_url = url
   if new_pki_url ~= nil then try_url = new_pki_url end
+  try_url = string.gsub(try_url, "/*$", "")
   if type == 'ca' then try_url = try_url .. "/pki/ca.crt"
   else try_url = try_url .. "/pki/ca.crl" end
   local xpath = '//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/'
@@ -139,7 +140,7 @@ function fetchCA(type, new_pki_url)
     return false, "unsupported type"
   end
   if file ~= nil then
-noit.log("error", "Fetching -> " .. try_url .. "\n")
+    noit.log("error", "Fetching -> " .. try_url .. "\n")
     local rv, error = fetch_url_to_file(try_url, file, tonumber(0644,8))
     if rv then
       if new_pki_url ~= nil and new_pki_url ~= url then

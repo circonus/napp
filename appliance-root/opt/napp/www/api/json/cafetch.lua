@@ -12,6 +12,7 @@ else
   if post.circonus_url ~= nil and url ~= post.circonus_url then
     -- set us a new API url
     url = post.circonus_url
+    url = string.gsub(url, "/*$", "")
     noit.conf_get_string("/noit/circonus/appliance/circonus_url", url)
   end
   local status, error = fetchCA(post.type, url)
