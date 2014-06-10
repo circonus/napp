@@ -538,7 +538,16 @@ function refresh_cert()
   end
 end
 
+function filtersets_maintain()
+  local cnt = noit.filtersets_cull()
+  if cnt > 0 then
+    noit.log("error", "Culling %s unused filtersets.\n", cnt)
+    noit.conf_save()
+  end
+end
+
 function start_upkeep()
+  noit.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
   noit.coroutine_spawn(do_periodically(refresh_cert, 3600))
   noit.coroutine_spawn(do_periodically(function() fetchCA('ca') end, 3600))
   noit.coroutine_spawn(do_periodically(function() fetchCA('crl') end, 3600))
