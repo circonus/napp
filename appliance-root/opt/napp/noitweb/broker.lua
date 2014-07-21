@@ -318,7 +318,7 @@ function redirect(http, url)
   http:header('Location', url)
   http:header('Content-Length', '0')
   http:flush_end()
-  error("redirecting, terminating response")
+  noit.log("debug", "redirecting, terminating response\n")
 end
 
 function inspect(http)
@@ -546,8 +546,91 @@ function filtersets_maintain()
   end
 end
 
+local reverse_sockets = {}
+function update_reverse_sockets(info)
+  local wanted = {}
+  local pki_info = pki_info()
+  local sslconfig = {
+    certificate_file = pki_info.cert.file,
+    key_file = pki_info.key.file,
+    ca_chain = pki_info.ca.file
+  }
+  if pki_info.crl and pki_info.crl.exists then
+    sslconfig.crl = pki_info.crl.file
+  end
+  local subject = get_subject()
+
+  -- if the prefer_reverse_connection flag isn't set, we have no stratcons
+  if info.prefer_reverse_connection ~= 1 then
+    noit.log("debug", "prefer_reverse_connection is off\n")
+    info.stratcons = {}
+  end
+  for i, key in pairs(info.stratcons) do
+    -- resolve the host, if needed
+    if not noit.valid_ip(key.host) then
+      local dns = noit.dns()
+      local r = dns:lookup(key.host)
+      if r == nil or r.a == nil then
+        r = dns:lookup(key.host, "AAAA")
+        if r == nil or r.aaaa == nil then
+          noit.log("error", "failed to lookup stratcon '%s' for reverse socket use\n", key.host)
+        end
+      end
+      if r ~= nil then key.host = r.a or r.aaaa end
+    end
+    wanted[key.host .. " " .. key.port] = key
+  end
+
+  -- remove any reverse_sockets that aren't wanted
+  for id, details in pairs(reverse_sockets) do
+    if wanted[id] == nil then
+      -- turn it down
+      noit.log("error", "Turning down reverse connection: '%s'\n", id)
+      noit.reverse_stop(details.host,details.port)
+      reverse_sockets[id] = nil
+    end
+  end
+
+  -- add any missing reverse_sockets that are wanted
+  for id, details in pairs(wanted) do
+    if reverse_sockets[id] == nil then
+      -- turn it up
+      noit.log("error", "Turning up reverse connection: '%s'\n", id)
+      noit.reverse_start(details.host,details.port,
+                         sslconfig,
+                         { cn = details.cn, 
+                           endpoint = subject,
+                           xbind = "*"
+                         })
+      reverse_sockets[id] = details
+    end
+  end
+end
+
+function reverse_socket_maintain()
+  noit.log("debug", "Checking reverse socket configuration\n")
+  while true do
+    local subj = get_subject()
+    if subj == nil then
+      noit.log("debug", "No subject set (yet)\n")
+    else
+      local code, body = get_agent_info(subj)
+      if code == 200 then
+        local info = json.decode(body)
+        if info ~= nil then
+          update_reverse_sockets(info)
+          break
+        end
+      end
+      noit.log("error", "Failed to fetch broker info: %d\n", code)
+    end
+    noit.sleep(5)
+  end
+end
+
 function start_upkeep()
   noit.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
+  noit.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
   noit.coroutine_spawn(do_periodically(refresh_cert, 3600))
   noit.coroutine_spawn(do_periodically(function() fetchCA('ca') end, 3600))
   noit.coroutine_spawn(do_periodically(function() fetchCA('crl') end, 3600))
