@@ -109,7 +109,7 @@ function can_update {
 function broker_service_state {
     case $1 in
         save)
-            vlog "Assessing current broker state."
+            vlog "Assessing current broker state"
             case $MY_OS in
                 omnios)
                     for svc in $BROKER_SERVICES; do
@@ -125,7 +125,7 @@ function broker_service_state {
             ;;
         restore)
             if [[ $SAVED_STATE -ne 1 ]]; then
-                echo "Attempted to restore service state without first saving it."
+                echo "Attempted to restore service state without first saving it"
                 exit 2
             fi
             case $MY_OS in
@@ -152,26 +152,35 @@ function broker_service_state {
                     ;;
                 *) echo "Impossible OS: $MY_OS."; exit 2;;
             esac
-            vlog "Restoring prior broker state."
+            vlog "Restoring prior broker state"
             ;;
         *)
-            echo "broker_service_state $* : command not recognized."
+            echo "broker_service_state $* : command not recognized"
             exit 2
             ;;
     esac
 }
 
 function broker_update {
+    vlog "Updating broker package"
+    local rv=0
     case $MY_OS in
         omnios)
             if [[ $VERBOSE -ne 0 ]]; then
                 $PKG update broker | cat
+                rv=${PIPESTATUS[0]}
             else
                 $PKG update broker 2>&1 > /dev/null
+                rv=$?
             fi
+            # pkg(1) returns 4 if no updates available; don't treat as failure
+            [[ $rv -eq 4 ]] && rv=0
             ;;
         *) echo "Impossible OS: $MY_OS."; exit 2;;
     esac
+    if [[ $rv -ne 0 ]]; then
+        vlog "Package update failed"
+    fi
 }
 
 ############################################################
@@ -219,9 +228,9 @@ done
 # will be attempting an update anyway.
 
 if can_update regular ; then
-    vlog "regular updates can happen"
+    vlog "Regular updates can happen"
 elif can_update security ; then
-    vlog "security updates can happen"
+    vlog "Security updates can happen"
     if [[ $(broker_current_version) -lt $(broker_required_version) ]]; then
         vlog "Security update required: $(broker_current_version) -> $(broker_required_version)."
     else
