@@ -1,51 +1,26 @@
 #!/bin/bash
 
+############################################################
+# Support functions
+############################################################
+
 function usage {
 cat <<EOU
-broker-update-mgr.sh [-h] [-v]
+broker-update-mgr [-h] [-v]
 
     -h:     This help message
     -v:     Verbose mode
 
 This tool will update the Circonus broker software based on the
-maintenance windows set in the noit.conf file.
+maintenance windows set in the circonus-appliance.conf file.
 EOU
 }
 
-############################################################
-# Support function
-############################################################
-
-NOITD=/opt/noit/prod/sbin/noitd
-REGULAR_UPDATES=0
-SECURITY_UPDATES=0
-VERBOSE=0
 function vlog {
   if [[ "$VERBOSE" -eq "0" ]]; then return 0; fi
   echo $*
 }
 
-set -- `getopt hv $*`
-if [[ $? != 0 ]]; then
-    usage
-    exit 2
-fi
-for i in $*
-do
-    case $i in
-        -h) usage; exit 0;;
-        -v) VERBOSE=1
-    esac
-done
-
-
-if [[ $(id -u) != "0" ]]; then
-    echo "Must be run as root"
-    exit 2
-fi
-
-MY_OS=
-PKGNAME=
 function set_platform {
     case `uname -v` in
         omnios-*)
@@ -65,8 +40,6 @@ function set_platform {
             ;;
     esac
 }
-# We can't do anything without this, call it right here.
-set_platform
 
 function broker_current_version {
     if [[ -n "$CURRENT_BROKER_VERSION" ]]; then
@@ -100,6 +73,7 @@ function circonus_url {
     URLS_RESOLVED=1
     echo $(circonus_url)
 }
+
 function broker_required_version {
     if [[ "$MINVERSION" -ne 0 ]]; then
         echo $MINVERSION
@@ -132,12 +106,6 @@ function can_update {
     return $CAN
 }
 
-SAVED_STATE=0
-declare -A BROKER_STATE
-BROKER_SERVICES="noitd jezebel"
-for svc in $BROKER_SERVICES; do
-    BROKER_STATE[$svc]="online"
-done
 function broker_service_state {
     case $1 in
         save)
@@ -209,6 +177,41 @@ function broker_update {
 ############################################################
 # Main Program
 ############################################################
+
+NOITD=/opt/noit/prod/sbin/noitd
+REGULAR_UPDATES=0
+SECURITY_UPDATES=0
+VERBOSE=0
+
+set -- `getopt hv $*`
+if [[ $? != 0 ]]; then
+    usage
+    exit 2
+fi
+for i in $*
+do
+    case $i in
+        -h) usage; exit 0;;
+        -v) VERBOSE=1
+    esac
+done
+
+
+if [[ $(id -u) != "0" ]]; then
+    echo "Must be run as root"
+    exit 2
+fi
+
+MY_OS=
+PKGNAME=
+set_platform
+
+SAVED_STATE=0
+declare -A BROKER_STATE
+BROKER_SERVICES="noitd jezebel"
+for svc in $BROKER_SERVICES; do
+    BROKER_STATE[$svc]="online"
+done
 
 # We else if the regular vs. security because if we can do regular
 # updates, we'll try to do updates regardless.  In other words,
