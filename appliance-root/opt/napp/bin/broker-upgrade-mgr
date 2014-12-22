@@ -27,14 +27,15 @@ function set_platform {
             case `uname -v` in
                 omnios-*)
                     MY_OS="omnios"
-                    PKGNAME="field/broker"
+                    BROKERPKG="field/broker"
+                    PKGS="$BROKERPKG"
                     PKG=/usr/bin/pkg
                     SVCS=/usr/bin/svcs
                     SVCADM=/usr/sbin/svcadm
                     ;;
                 joyent_*)
                     MY_OS="smartos"
-                    PKGNAME="unknown"
+                    PKGS="unknown"
                     ;;
                 *)
                     echo "Unknown Solarish OS"
@@ -45,7 +46,8 @@ function set_platform {
         Linux)
             if [[ -f /etc/redhat-release ]]; then
                 MY_OS="rhel"
-                PKGNAME="circonus-field-broker"
+                BROKERPKG="circonus-field-broker"
+                PKGS="$BROKERPKG circonus-field-broker-crashreporter"
                 YUM="/usr/bin/yum"
                 RPM="/bin/rpm"
                 SERVICE="/sbin/service"
@@ -69,10 +71,10 @@ function broker_current_version {
     local VERSION=""
     case "$MY_OS" in
         omnios)
-            VERSION=`pkg list -H -v $PKGNAME 2>&1 | cut -d@ -f2 | cut -d, -f1 | sed -e 's/.*\.//' | sed -e 's/[^0-9]//g'`
+            VERSION=`pkg list -H -v $BROKERPKG 2>&1 | cut -d@ -f2 | cut -d, -f1 | sed -e 's/.*\.//' | sed -e 's/[^0-9]//g'`
             ;;
         rhel)
-            VERSION=`$RPM -q --qf "%{version}" $PKGNAME | cut -d. -f3`
+            VERSION=`$RPM -q --qf "%{version}" $BROKERPKG | cut -d. -f3`
             ;;
         *)
             VERSION=
@@ -222,15 +224,17 @@ function broker_update {
     local rv=0
     case $MY_OS in
         omnios)
-            if [[ $VERBOSE -ne 0 ]]; then
-                $PKG update broker | cat
-                rv=${PIPESTATUS[0]}
-            else
-                $PKG update broker 2>&1 > /dev/null
-                rv=$?
-            fi
-            # pkg(1) returns 4 if no updates available; don't treat as failure
-            [[ $rv -eq 4 ]] && rv=0
+            for pkg in $PKGS; do \
+                if [[ $VERBOSE -ne 0 ]]; then
+                    $PKG update $pkg | cat
+                    rv=${PIPESTATUS[0]}
+                else
+                    $PKG update $pkg 2>&1 > /dev/null
+                    rv=$?
+                fi
+                # pkg(1) returns 4 if no updates available; don't treat as failure
+                [[ $rv -eq 0 || $rv -eq 4 ]] || vlog "Updating $pkg failed"
+            done
             ;;
         rhel)
             local yum_opts=
@@ -239,14 +243,17 @@ function broker_update {
             else
                 yum_opts="-q -y"
             fi
-            $YUM $yum_opts update $PKGNAME
-            rv=$?
+            for pkg in $PKGS; do \
+                $RPM -q $pkg >/dev/null 2>&1
+                if [[ $? -eq 0 ]]; then
+                    $YUM $yum_opts update $pkg
+                    rv=$?
+                    [[ $rv -eq 0 ]] || vlog "Updating $pkg failed"
+                fi
+            done
             ;;
         *) echo "Impossible OS: $MY_OS."; exit 2;;
     esac
-    if [[ $rv -ne 0 ]]; then
-        vlog "Package update failed"
-    fi
 }
 
 ############################################################
@@ -278,7 +285,8 @@ if [[ $(id -u) != "0" ]]; then
 fi
 
 MY_OS=
-PKGNAME=
+BROKERPKG=
+PKGS=
 set_platform
 
 SAVED_STATE=0
