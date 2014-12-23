@@ -1,0 +1,17 @@
+#!/bin/sh
+
+DIR=/opt/noit/prod/traces
+PROJECT=broker
+TOKEN=broker
+
+function error {
+  echo $*
+  exit 2
+}
+
+cd $DIR || error "chdir to $DIR failed"
+
+for btt in *.btt; do
+  /opt/backtrace/bin/coroner --cf /opt/noit/prod/etc/coroner.conf \
+    put -u $PROJECT $TOKEN $btt
+done
