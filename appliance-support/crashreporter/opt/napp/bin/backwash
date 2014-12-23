@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 PID=$1
 
 if [ -r /opt/noit/prod/etc/noit.env ]; then
