@@ -29,14 +29,6 @@ end
 
 function generate_csr(subject, csrfile)
   local pki = pki_info()
-  local fd = noit.open('/opt/napp/etc/ssl/ssl_subj.txt',
-                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0644,8))
-  if fd < 0 then
-    return fd, "Could not store broker PKI CN"
-  end
-  noit.write(fd, subject)
-  noit.close(fd)
-
   local inp = io.open(pki.key.file, "rb")
   if inp == nil then return -1, "could not open private key" end
   local keydata = inp:read("*all")
@@ -61,11 +53,14 @@ function generate_csr(subject, csrfile)
 end
 
 function get_subject()
-  local inp = io.open('/opt/napp/etc/ssl/ssl_subj.txt', "rb")
+  local inp = io.open('/opt/napp/etc/ssl/appliance.csr', "rb")
   if inp == nil then return nil end
   local data = inp:read("*all")
   inp:close();
-  local cn = data:match("CN=([^/\n]+)")
+  if data == nil then return nil end
+  local req = crypto.newreq(data)
+  if req == nil then return nil end
+  local cn = req.subject:match("CN=([^/\n]+)")
   return cn
 end
 

@@ -17,8 +17,8 @@ fi
 
 echo "Invoking tracer against $PID."
 
-if [ -r /opt/napp/etc/ssl/ssl_subj.txt ]; then
-	HOSTCN=`cat /opt/napp/etc/ssl/ssl_subj.txt | sed -e 's/.*CN=//g;' -e 's#/.*##g;'`
+if [ -r /opt/napp/etc/ssl/appliance.crt ]; then
+	HOSTCN=`openssl x509 -in /opt/napp/etc/ssl/appliance.crt -subject | awk -F'= ' '/^subject= (.+)/{print $2;}' | sed -e 's/.*CN=//g;' -e 's#/.*##g;'`
 fi
 
 /opt/backtrace/bin/ptrace --print --config=/opt/noit/prod/etc/ptrace.conf \
