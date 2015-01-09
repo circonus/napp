@@ -7,9 +7,8 @@
       <default_ca_chain>/opt/noit/prod/etc/default-ca-chain.crt</default_ca_chain>
     </config>
   </eventer>
-  <logs>
-    <include file="circonus-logs.conf"/>
-  </logs>
+  <include file="circonus-security.conf" snippet="true"/>
+  <include file="circonus-logs.conf" snippet="true"/>
   <modules directory="/opt/noit/prod/libexec/noit">
     <loader image="lua" name="lua">
       <config>
@@ -18,20 +17,15 @@
     </loader>
     <include file="circonus-modules.conf"/>
   </modules>
-  <listeners>
-    <include file="circonus-listeners.conf"/>
-  </listeners>
+  <include file="circonus-listeners.conf" snippet="true"/>
+
   <checks max_initial_stutter="60000" filterset="default">
   </checks>
   <filtersets>
     <include file="circonus-filtersets.conf"/>
   </filtersets>
-  <config_templates>
-    <include file="config_templates.conf"/>
-  </config_templates>
-  <rest>
-    <include file="circonus-rest.conf"/>
-  </rest>
+
+  <include file="circonus-rest.conf" snippet="true"/>
   <circonus>
     <appliance>
       <include file="circonus-appliance.conf" snippet="true"/>
