@@ -1,0 +1,8 @@
+Copyright 2010-2013 Circonus, Inc. All rights reserved.
+
+Packaging includes other deliverables:
+
+mysql-connector-java: GPL [http://dev.mysql.com/downloads/connector/j/]
+ojdbc14: OTN [http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-10201-088211.html]
+postgresql jdbc: new-BSD [http://jdbc.postgresql.org/]
+sqljdbc4: MICROSOFT SOFTWARE LICENSE TERMS REDISTRIBUTION LICENSE FOR MICROSOFT JDBC DRIVER 4.0 FOR SQL SERVER [http://msdn.microsoft.com/en-us/sqlserver/jj589698]
