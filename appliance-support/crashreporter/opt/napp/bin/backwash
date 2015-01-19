@@ -26,4 +26,3 @@ fi
 	--kv=branch:$NOIT_BRANCH,version:$NOIT_VERSION,version_tstamp:$NOIT_VERSION_TSTAMP,buildmachine:$BUILD_UNAME_N \
 	$PID
 
-(/opt/napp/bin/backsweep 0<&- &>/dev/null &) &
