@@ -10,7 +10,7 @@ fi
 
 if [ ! -x /opt/backtrace/bin/ptrace ]; then
 	echo "Process $PID has crashed."
-  echo "Noit version: $NOIT_VERSION"
+	echo "Noit version: $NOIT_VERSION"
 	echo "No tracer installed."
 	exit
 fi
