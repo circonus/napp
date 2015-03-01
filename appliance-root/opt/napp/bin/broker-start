@@ -1,5 +1,6 @@
 #!/bin/sh
 
+NOITD=/opt/noit/prod/sbin/noitd
 CONF=/opt/noit/prod/etc/noit.conf
 USER=broker
 GROUP=broker
@@ -20,7 +21,7 @@ set +o allexport
 
 # Just in case, chown this stuff
 for dir in $WRITE_PATHS; do
-	/bin/chown -R $USER:$GROUP $dir
+	/bin/chown -R $USER:$GROUP $dir 2>/dev/null
 done
 
 # Update bits
@@ -31,5 +32,22 @@ if [ -n "$HAS_LOADER" ]; then
 	sed -ie '/<loader image="lua" name="lua">/,/<\/loader>/d' $CONF
 fi
 
-exec /opt/noit/prod/sbin/noitd -c /opt/noit/prod/etc/noit.conf -u $USER -g $GROUP $*
+# move credentials around change d2b17c3
+O_USER=`$NOITD -x '/noit/circonus/appliance/username' 2>/dev/null | grep '^0:' | cut -c4-`
+O_PASS=`$NOITD -x '/noit/circonus/appliance/password' 2>/dev/null | grep '^0:' | cut -c4-`
+O_INSIDE=`$NOITD -x '/noit/circonus/appliance/inside' 2>/dev/null | grep '^0:' | cut -c4-`
+O_URL=`$NOITD -x '/noit/circonus/appliance/circonus_url' 2>/dev/null | grep '^0:' | cut -c4-`
+if [ -n "$O_USER$O_PASS$O_INSIDE$O_URL" ]; then
+	cat << END_OF_CONF > /opt/noit/prod/etc/circonus-credentials.conf
+<?xml version="1.0" encoding="utf8"?>
+<credentials>
+$O_USER
+$O_PASS
+$O_INSIDE
+$O_URL
+</credentials>
+END_OF_CONF
+fi
+
+exec $NOITD -c $CONF -u $USER -g $GROUP $*
 exit 2
