@@ -1,5 +1,6 @@
 #!/bin/sh
 
+CONF=/opt/noit/prod/etc/noit.conf
 USER=broker
 GROUP=broker
 WRITE_PATHS=" \
@@ -21,6 +22,14 @@ set +o allexport
 for dir in $WRITE_PATHS; do
 	/bin/chown -R $USER:$GROUP $dir
 done
+
+# Update bits
+
+# upgrade for conf change 4f43782
+HAS_LOADER=`grep '<loader image="lua" name="lua">' $CONF 2>/dev/null`
+if [ -n "$HAS_LOADER" ]; then
+	sed -ie '/<loader image="lua" name="lua">/,/<\/loader>/d' $CONF
+fi
 
 exec /opt/noit/prod/sbin/noitd -c /opt/noit/prod/etc/noit.conf -u $USER -g $GROUP $*
 exit 2
