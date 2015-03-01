@@ -1,4 +1,4 @@
-local inside = noit.conf_get_boolean('/noit/circonus/appliance/inside')
+local inside = noit.conf_get_boolean('/noit/circonus/appliance//credentials/inside')
 if inside == nil or inside == '' then inside = false end
 
 http:write([=[<html>

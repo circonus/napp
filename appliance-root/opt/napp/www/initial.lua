@@ -1,7 +1,7 @@
 local req = http:request()
-local user_set = noit.conf_get_string("/noit/circonus/appliance/username")
-local pass_set = noit.conf_get_string("/noit/circonus/appliance/password")
-if user_set ~= nil and pass_set ~= nil then
+local user_set = noit.conf_get_string("/noit/circonus/appliance//credentials/username")
+local pass_set = noit.conf_get_string("/noit/circonus/appliance//credentials/password")
+if user_set ~= nil and pass_set ~= nil and user_set ~= "" and pass_set ~= "" then
   redirect(http, "/login")
 end
 if req:method() == "POST" then
@@ -17,12 +17,12 @@ if req:method() == "POST" then
         error("cannot create /noit/circonus/appliance")
       end
     end
-    if user_set == nil or pass_set == nil then
-      user_set = noit.conf_get_string("/noit/circonus/appliance/username",
+    if user_set == nil or pass_set == nil or user_set == "" or pass_set == "" then
+      user_set = noit.conf_get_string("/noit/circonus/appliance//credentials/username",
                                       form['username'])
-      pass_set = noit.conf_get_string("/noit/circonus/appliance/password",
+      pass_set = noit.conf_get_string("/noit/circonus/appliance//credentials/password",
                                       form['password'])
-      noit.conf_get_boolean("/noit/circonus/appliance/inside", not not form['inside'])
+      noit.conf_get_boolean("/noit/circonus/appliance//credentials/inside", not not form['inside'])
     end
     if user_set and pass_set then 
       redirect(http, "/login")

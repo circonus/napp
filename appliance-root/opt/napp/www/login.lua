@@ -1,7 +1,7 @@
 local req = http:request()
 if req:method() == "POST" then
-  local needed_user = noit.conf_get_string("/noit/circonus/appliance/username")
-  local needed_pass = noit.conf_get_string("/noit/circonus/appliance/password")
+  local needed_user = noit.conf_get_string("/noit/circonus/appliance//credentials/username")
+  local needed_pass = noit.conf_get_string("/noit/circonus/appliance//credentials/password")
   local f = req:form()
   if f ~= nil then
     if needed_user ~= nil and needed_pass ~= nil and

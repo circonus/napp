@@ -1,6 +1,6 @@
 local req = http:request()
 
-local inside = noit.conf_get_boolean('/noit/circonus/appliance/inside')
+local inside = noit.conf_get_boolean('/noit/circonus/appliance//credentials/inside')
 if inside == nil or inside == '' then inside = false end
 
 if inside == false then redirect(http, "/") end

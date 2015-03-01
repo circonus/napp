@@ -3,6 +3,8 @@ module(..., package.seeall)
 local sessions = {}
 local HttpClient = require('noit.HttpClient') 
 local json = require('json')
+local noit = require('noit')
+local mtev = require('mtev')
 
 function new_session()
   local uuid = noit.uuid()
@@ -12,7 +14,7 @@ function new_session()
 end
 
 function generate_key(keyfile)
-  local rsa = crypto.newrsa()
+  local rsa = mtev.newrsa()
   if rsa == nil then
     return -1, "keygen failed"
   end
@@ -33,7 +35,7 @@ function generate_csr(subject, csrfile)
   if inp == nil then return -1, "could not open private key" end
   local keydata = inp:read("*all")
   inp:close();
-  local key = crypto.newrsa(keydata)
+  local key = mtev.newrsa(keydata)
   if key == nil then return -1, "private key invalid" end
   local subj = {}
   for k, v in string.gmatch(subject, "(%w+)=([^/]+)") do
@@ -58,7 +60,7 @@ function get_subject()
   local data = inp:read("*all")
   inp:close();
   if data == nil then return nil end
-  local req = crypto.newreq(data)
+  local req = mtev.newreq(data)
   if req == nil then return nil end
   local cn = req.subject:match("CN=([^/\n]+)")
   return cn
@@ -234,11 +236,11 @@ function get_session(uuid)
 end
 
 function inside()
-  return noit.conf_get_boolean("/noit/circonus/appliance/inside") or false
+  return noit.conf_get_boolean("/noit/circonus/appliance//credentials/inside") or false
 end
 
 function circonus_url()
-  return noit.conf_get_string("/noit/circonus/appliance/circonus_url") or "https://login.circonus.com"
+  return noit.conf_get_string("/noit/circonus/appliance//credentials/circonus_url") or "https://login.circonus.com"
 end
 
 function pki_info()
@@ -294,10 +296,12 @@ function fix_stage(http)
   local hash = '';
   if inside() then hash = 'inside' end
   local req = http:request()
-  local username = noit.conf_get_string("/noit/circonus/appliance/username")
-  local password = noit.conf_get_string("/noit/circonus/appliance/password")
+  local username = noit.conf_get_string("/noit/circonus/appliance//credentials/username")
+  local password = noit.conf_get_string("/noit/circonus/appliance//credentials/password")
   local session = req:cookie("appsession")  
-  if username == nil or password == nil then return "/initial" end -- setup ability to login
+  if username == nil or password == nil or username == "" or password == "" then
+    return "/initial"
+  end -- setup ability to login
   if get_session(session) == nil then return "/login" end -- require login
   if req:uri():match("^/api/") then return nil end -- pass through API
   if needs_pki() or req:uri() == "/pki" then return "/pki", hash end -- needs CA and possibly CRL

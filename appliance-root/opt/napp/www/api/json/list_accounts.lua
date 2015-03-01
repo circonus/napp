@@ -7,7 +7,7 @@ if post.api_url ~= nil and url ~= post.api_url then
   -- set us a new API url
   url = post.api_url
   url = string.gsub(url, "/*$", "")
-  noit.conf_get_string("/noit/circonus/appliance/circonus_url", url)
+  noit.conf_get_string("/noit/circonus/appliance//credentials/circonus_url", url)
 end
 http:header('Content-Type', 'application/json')
 local code, data = list_accounts(post)
