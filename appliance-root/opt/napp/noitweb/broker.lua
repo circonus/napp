@@ -141,7 +141,7 @@ function fetchCA(type, new_pki_url)
     local rv, error = fetch_url_to_file(try_url, file, tonumber(0644,8))
     if rv then
       if new_pki_url ~= nil and new_pki_url ~= url then
-        noit.conf_get_string("/noit/circonus/appliance/circonus_url", new_pki_url)
+        noit.conf_get_string("/noit/circonus/appliance//credentials/circonus_url", new_pki_url)
       end
       return true
     end
