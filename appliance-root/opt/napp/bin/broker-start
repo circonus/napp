@@ -10,6 +10,12 @@ WRITE_PATHS=" \
 	/opt/noit/prod/etc \
 "
 
+if [ -x /usr/gnu/bin/awk ]; then
+	AWK="/usr/gnu/bin/awk"
+else
+	AWK="awk"
+fi
+
 set -o allexport
 if [ -r /opt/noit/prod/etc/noit.env ]; then
 	. /opt/noit/prod/etc/noit.env
@@ -38,7 +44,7 @@ if [ -z "`grep circonus-credentials.conf $CONF`" ]; then
 	echo "Upgrading noit.conf adding circonus-credentials.conf include"
 	rm -f $CONF.bak
 	cp $CONF $CONF.bak
-  awk '/<\/appliance>/{ print "      <include file=\"circonus-credentials.conf\" snippet=\"true\"/>";} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
+	$AWK '/<\/appliance>/{ print "      <include file=\"circonus-credentials.conf\" snippet=\"true\"/>";} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
 	rm -f $CONF.bak
 fi
 
@@ -61,7 +67,7 @@ END_OF_CONF
 	echo "Removing credentials from noit.conf"
 	rm -f $CONF.bak
 	cp $CONF $CONF.bak
-	awk '/<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){next;}} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
+	$AWK '/<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){next;}} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
 	rm -f $CONF.bak
 fi
 
