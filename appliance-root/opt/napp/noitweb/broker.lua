@@ -1,7 +1,7 @@
 module(..., package.seeall)
 
 local sessions = {}
-local cached_agent_info = nil
+local cached_agent_info = {}
 
 local HttpClient = require('noit.HttpClient') 
 local json = require('json')
@@ -228,22 +228,22 @@ function get_agent_info(subject)
     local info = json.decode(body)
     --only cache if everything is good
     if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
-      cached_agent_info = body
+      cached_agent_info[subject] = body
     else
-      cached_agent_info = nil
+      cached_agent_info[subject] = nil
     end
   else
     noit.log("error", "Failed to fetch broker info in get_agent_info: %d\n", code)
-    cached_agent_info = nil
+    cached_agent_info[subject] = nil
   end
   return code, body
 end
 
 function get_cached_agent_info(subject)
   local code, body
-  if cached_agent_info ~= nil then
+  if cached_agent_info[subject] ~= nil then
     code = 200
-    body = cached_agent_info
+    body = cached_agent_info[subject]
   else
     code, body = get_agent_info(subject)
   end
