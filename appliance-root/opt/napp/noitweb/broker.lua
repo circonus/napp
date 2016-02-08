@@ -1,6 +1,8 @@
 module(..., package.seeall)
 
 local sessions = {}
+local cached_agent_info = nil
+
 local HttpClient = require('noit.HttpClient') 
 local json = require('json')
 local noit = require('noit')
@@ -222,6 +224,29 @@ function get_agent_info(subject)
   local cn_encoded = noit.extras.url_encode(subject)
   local success, code, body =
     fetch_url(circonus_url() .. "/api/json/agent?cn=" .. cn_encoded)
+  if code == 200 and body ~= nil then
+    local info = json.decode(body)
+    --only cache if everything is good
+    if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
+      cached_agent_info = body
+    else
+      cached_agent_info = nil
+    end
+  else
+    noit.log("error", "Failed to fetch broker info in get_agent_info: %d\n", code)
+    cached_agent_info = nil
+  end
+  return code, body
+end
+
+function get_cached_agent_info(subject)
+  local code, body
+  if cached_agent_info ~= nil then
+    code = 200
+    body = cached_agent_info
+  else
+    code, body = get_agent_info(subject)
+  end
   return code, body
 end
 
@@ -527,10 +552,20 @@ function refresh_cert()
         local info = json.decode(body)
         if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
           write_contents_if_changed(pki_info.cert.file, info.cert)
+        else
+          if info == nil then
+            noit.log("error", "Error: Failed to decode agent info json in get_agent_info\n")
+          elseif info.cert == nil then
+            noit.log("error", "Error: No agent certificate in get_agent_info\n")
+          elseif info.cert:len() <= 0 then
+            noit.log("error", "Error: Agent certificate has invalid length in get_agent_info\n")
+          end
         end
       end
       local info = pki_info()
-      if info.cert.exists then break end
+      if info.cert.exists then
+        break 
+      end
       noit.log("error", "Circonus certificate non-existent, polling(5)\n")
     end
     noit.sleep(5)
@@ -613,7 +648,7 @@ function reverse_socket_maintain()
     if subj == nil then
       noit.log("debug", "No subject set (yet)\n")
     else
-      local code, body = get_agent_info(subj)
+      local code, body = get_cached_agent_info(subj)
       if code == 200 then
         local info = json.decode(body)
         if info ~= nil then
@@ -621,7 +656,6 @@ function reverse_socket_maintain()
           break
         end
       end
-      noit.log("error", "Failed to fetch broker info: %d\n", code)
     end
     noit.sleep(5)
   end
