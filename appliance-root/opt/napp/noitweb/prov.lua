@@ -1,0 +1,608 @@
+module("prov", package.seeall)
+
+local HttpClient = require 'mtev.HttpClient'
+local API_KEY
+
+local task_provision, task_unprovision, task_list, cn, ip_address,
+      CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
+      prog, debug, brokers, set_name, CAcn
+
+prog = "provtool"
+CAcn = "Circonus%20Certificate%20Authority"
+CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus_api_token"
+CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
+
+function _P(...) mtev.log("stdout", ...) end
+function _E(...) mtev.log("error", ...) end
+function _F(...) mtev.log("error", ...) os.exit(2) end
+function _D(...) if debug then mtev.log("debug/cli", ...) end end
+
+local configs = { }
+configs['api-url'] = {
+  path = CIRCONUS_API_URL_CONF_PATH,
+  description = "the Circonus API base url",
+  default = "https://api.circonus.com"
+}
+configs['api-token'] = {
+  path = CIRCONUS_API_TOKEN_CONF_PATH,
+  description = "the Circonus API token for provisioning"
+}
+configs['googleanalytics/client-id'] = {
+  path = "//circonus/googleanalytics//config/client_id",
+  description = "Google Analytics Client Id"
+}
+configs['googleanalytics/client-secret'] = {
+  path = "//circonus/googleanalytics//config/client_secret",
+  description = "Google Analytics Client Secret"
+}
+configs['googleanalytics/api-key'] = {
+  path = "//circonus/googleanalytics//config/api_key",
+  description = "Google Analytics API Key"
+}
+function do_config_get(key)
+  if key == nil then
+    local a = {}
+    for n in pairs(configs) do table.insert(a, n) end
+    table.sort(a)
+    for _,k in pairs(a) do
+      _P("%s=%s\n", k, mtev.conf_get_string(configs[k].path))
+    end
+  elseif not configs[key] then
+    _F("Unknown config key: %s\n", key)
+  else
+    _P("%s\n", mtev.conf_get_string(configs[key].path))
+  end
+  return 0
+end
+function do_config_set(key, value)
+  if not configs[key] then _F("Unknown config key: %s\n", key) end
+  mtev.conf_get_string(configs[key].path, value)
+end
+
+function config_usage()
+  local a = {}
+  for n in pairs(configs) do table.insert(a, n) end
+  table.sort(a)
+  for _,k in pairs(a) do
+    local v = configs[k]
+    _P("\t%s:\t%s\n", k, v.description)
+    if v.default then _P("\t\tdefault: %s\n", v.default) end
+  end
+end
+
+function usage()
+  _P("%s usage:\n\n", prog)
+  _P("%s config get <key>\n", prog)
+  _P("%s config set <key> <value>\n", prog)
+  config_usage()
+  _P("\n")
+  _P("%s list\n", prog)
+  _P("\tList all brokers configured on your account\n")
+  _P("\n")
+  _P("%s provision [-cn <cn>] [-ip <ip>] [-name <name>]\n", prog)
+  _P("\tProvision this broker\n")
+  _P("\t-cn <cn>\tspecify a broker CN, default first unprovisioned\n")
+  _P("\t-ip <IP>\tset the broker IP address to which Circonus will connect\n")
+  _P("\t-name <name>\tan optional name for the broker\n")
+  _P("\n")
+  _P("\n")
+  _P("%s unprovision [-c <cn>]\n", prog)
+  _P("\tRetire the current broker (or another broker)\n")
+  _P("\t-c <cn>\tunprovision a broker by CN. BE CAREFUL!\n")
+  _P("\n")
+end
+
+function write_contents_if_changed(file, body, mode)
+  if mode == nil then
+     mode = tonumber(0644, 8)
+  end
+  local inp = io.open(file, "rb")
+  if inp ~= nil then
+    local data = inp:read("*all")
+    inp:close();
+    if body == data then return true end
+  end
+  local fd = mtev.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  if fd >= 0 then
+    local len, error = mtev.write(fd, body)
+    mtev.close(fd)
+    if len ~= body:len() then return false end
+    return true
+  end
+  return false
+end
+
+function fetch_url_to_file(url, file, mode)
+  local code, body = fetch_url(url)
+  if code ~= 200 then return false, body end
+  if body:len() == 0 then return false, "blank document" end
+  if not write_contents_if_changed(file, body, mode) then
+    return false
+  end
+end
+
+function nextargs_iter()
+  local i = 1
+  return function()
+    i = i + 1
+    return arg[i-1]
+  end
+end
+
+local opts = {
+  d = function(n) debug = true end
+}
+
+function parse_cli()
+  local next = nextargs_iter(arg)
+  local prog = next()
+
+  local command = next()
+  if command == 'config' then
+    local subcommand = next()
+    if subcommand == 'get' then
+      os.exit(do_config_get(next()))
+    elseif subcommand == 'set' then
+      os.exit(do_config_set(next(), next()))
+    end
+    _E("invalid config subcommand: %s\n", subcommand)
+    usage()
+    os.exit(2)
+  elseif command == 'list' then task_list = true
+  elseif command == 'provision' then
+    task_provision = true
+    opts.cn = function(n) cn = n() end
+    opts.ip = function(n) ip_address = n() end
+    opts.name = function(n) set_name = n() end
+  elseif command == 'unprovision' then
+    task_unprovision = true
+    opts.cn = function(n) cn = n() end
+  else usage() os.exit(2)
+  end
+
+  for v in next do
+    if type(opts[v:sub(2)]) == 'function' then
+      opts[v:sub(2)](next)
+    else
+      usage()
+      _F("%s is an invalid option\n", v)
+    end
+  end
+end
+
+function table2string(t, prefix)
+  local output = ''
+  if prefix == nil then prefix = '' end
+  for k,v in pairs(t) do
+    if type(v) == 'table' then
+      output = output .. prefix .. k .. " :\n" .. table2string(v, prefix.."  ")
+    else
+      output = output .. prefix .. k .. " : " .. tostring(v) .. "\n"
+    end
+  end
+  return output
+end
+
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+function circonus_api_token()
+  return mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
+end
+function circonus_api_url()
+  return mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH)
+      or "https://api.circonus.com"
+end
+function _API(endpoint)
+  return circonus_api_url() .. endpoint
+end
+
+function pki_info()
+  local keyfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
+  local csrfile = keyfile:gsub("%.key$", ".csr")
+  local certfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
+  local crl = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
+  local ca_chain = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
+
+  local details = {}
+  local needs = false
+
+  -- key but no contents
+  details.key = { file=keyfile, exists=not not mtev.stat(keyfile) }
+
+  -- all the other bits have the whole file slurped
+  details.crl = { file=crl, exists=not not mtev.stat(crl) }
+  details.crl.data = slurp_file(details.crl.file)
+  details.csr = { file=csrfile, exists=not not mtev.stat(csrfile) }
+  details.csr.data = slurp_file(details.csr.file)
+  details.cert = { file=certfile, exists=not not mtev.stat(certfile) }
+  details.cert.data = slurp_file(details.cert.file)
+  details.ca = { file=ca_chain, exists=not not mtev.stat(ca_chain) }
+  details.ca.data = slurp_file(details.ca.file)
+  return details
+end
+
+function HTTP(method, url, payload, silent, _pp)
+  _pp = _pp or function(o)
+    local doc = mtev.parsejson(o)
+    if doc == nil then return nil end
+    return doc:document()
+  end
+  local _F, _E = _F, _E
+  if silent then _F = function() end  _E = _F end
+  local schema, host, sep, port, uri = string.match(url, "^(https?)://([^:/]*)(:?)([0-9]*)(/?.*)$")
+  local use_ssl = false
+  local headers = {}
+  local in_headers = {}
+
+  if string.find(url, circonus_api_url()) == 1 then
+    headers["X-Circonus-Auth-Token"] = API_TOKEN
+    headers["X-Circonus-App-Name"] = "broker-provision"
+  end
+
+  if port == '' or port == nil then
+    if schema == 'http' then
+      port = 80
+    elseif schema == 'https' then
+      port = 443
+    else
+      error(schema .. " not supported")
+    end
+  end
+  if schema == 'https' then
+    use_ssl = true
+  end
+
+  local callbacks = { }
+  callbacks.consume = function (str)
+    if setfirstbyte == 1 then
+      firstbytetime = mtev.timeval.now()
+      setfirstbyte = 0
+    end
+    output = output .. (str or '')
+  end
+
+  local dns = mtev.dns()
+  local r = dns:lookup(host)
+  if not r or r.a == nil then
+    mtev.log("error", "failed to resolve %s\n", host)
+    return -1
+  end
+
+  local output = ''
+  local callbacks = {}
+  callbacks.consume = function (str) output = output .. (str or '') end
+  callbacks.headers = function (hdrs) in_headers = hdrs end
+
+  local client = HttpClient:new(callbacks)
+  local rv, err = client:connect(r.a, port, use_ssl, host)
+  if rv ~= 0 then
+    mtev.log("error", "Failed to connect %s\n", err)
+    return -1
+  end
+
+  _D("%s -> %s %s\n", r.a, method, url)
+
+  headers.Host = host
+  headers.Accept = 'application/json'
+  local rv = client:do_request(method, uri, headers, payload, "1.1")
+  client:get_response(1024000)
+
+  if string.find(url, circonus_api_url()) == 1 then
+    if client.code == 403 then
+      _F("Permission denied! (bad CIRCONUS_AUTH_TOKEN?\n")
+    end
+    if client.code == 401 then
+      mtev.log("error", "Looks like your token is pending validation.\n")
+      local tok_url = in_headers['x-circonus-token-approval-url']
+                  or 'the token management page'
+      _F("Please visit %s to approve its use here.\n", tok_url)
+    end
+    if client.code ~= 200 then
+      _E("An unknown error (%s) has occurred accessing: %s\n", client.code, url)
+      _E("Please report this issue to support@circonus.com\n")
+    end
+  end
+
+  return client.code, _pp(output), output
+end
+
+function fetch_url(url)
+  return HTTP("GET", url, nil, true, function(o) return o end)
+end
+function get_ip()
+  local code, obj = HTTP("GET", _API("/v2/canhazip"), nil, true)
+  if obj ~= nil then return code, obj.ipv4 end
+  return code, nil
+end
+function get_account()
+  return HTTP("GET", _API("/v2/account/current"))
+end
+function get_brokers(type)
+  if type == nil then type = "enterprise" end
+  local code, obj, body = HTTP("GET", _API("/v2/broker?f__type=" .. type))
+  brokers = obj
+  return code, obj, body
+end
+function get_broker(cn)
+  return HTTP("GET", _API("/v2/provision_broker/" .. cn))
+end
+function provision_broker(cn, data)
+  local payload = mtev.tojson(data):tostring()
+  return HTTP("PUT", _API("/v2/provision_broker/" .. cn), payload)
+end
+
+function generate_key(keyfile)
+  local rsa = mtev.newrsa()
+  if rsa == nil then
+    return -1, "keygen failed"
+  end
+  local fd = mtev.open(keyfile,
+                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0600,8))
+  if fd < 0 then
+    return fd, "Could not store broker private key"
+  end
+  mtev.write(fd, rsa:pem())
+  mtev.close(fd)
+  mtev.chmod(keyfile, tonumber(0600, 8))
+  return 0
+end
+
+function generate_csr(cn,c,st,o)
+  c = c or ''
+  st = st or ''
+  o = o or ''
+  local subject = '/C=' .. c .. '/ST=' .. st .. '/O=' .. o .. '/CN=' .. cn
+  local pki = pki_info()
+  local inp = io.open(pki.key.file, "rb")
+  if inp == nil then return -1, "could not open private key" end
+  local keydata = inp:read("*all")
+  inp:close()
+  local key = mtev.newrsa(keydata)
+  if key == nil then return -1, "private key invalid" end
+  local subj = {}
+  for k, v in string.gmatch(subject, "(%w+)=([^/]+)") do
+    subj[k] = v
+  end
+  local req = key:gencsr({ subject=subj })
+
+  local fd = mtev.open(pki.csr.file,
+                       bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0644,8))
+  if fd < 0 then
+    return fd, "Could not store broker CSR"
+  end
+  mtev.write(fd, req:pem())
+  mtev.close(fd)
+  mtev.chmod(pki.csr.file, tonumber(0600, 8))
+  return 0
+end
+
+function slurp_file(file)
+  if file == nil then return nil end
+  local inp = io.open(file, "rb")
+  if inp == nil then return nil, nil end
+  local data = inp:read("*all")
+  inp:close()
+  if data == nil then return nil, nil end
+  return data
+end
+
+function extract_subject()
+  local pki = pki_info()
+  if pki.csr.data == nil then return nil end
+  local req = mtev.newreq(pki.csr.data)
+  if req == nil then return nil, data end
+  local cn = req.subject:match("CN=([^/\n]+)")
+  return cn, pki.csr.data
+end
+
+function find_broker(cn)
+  if brokers == nil then get_brokers() end
+  for _,group in pairs(brokers) do
+    for _,broker in pairs(group._details) do
+      if broker.cn == cn then return broker end
+    end
+  end
+  return nil
+end
+
+function do_task_list(_print)
+  local avail
+  local count = 0
+  local code, obj = get_brokers()
+  if _print == nil then _print = function() return end end
+  for _,group in pairs(obj) do
+    _print("%s== Group: %s ==\n", count > 0 and "\n" or "", group._name)
+    for _,broker in pairs(group._details) do
+      if avail == nil and broker.status == 'unprovisioned' then
+        avail = broker.cn
+      end
+      _print("  %s is %s\n", broker.cn, broker.status)
+      count = count + 1
+    end
+  end
+  if count < 1 then
+    _print("No brokers found\n")
+  end
+  return avail
+end
+
+function do_fetch_certificate(myself)
+  local cn = myself._cid
+  _P(" -- attempting to fetch certificate for %s", cn)
+  local pki = pki_info()
+  repeat 
+    _, myself = get_broker(cn)
+    if myself._cert ~= nil then
+      local fd = mtev.open(pki.cert.file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), tonumber(0644,8))
+      if fd < 0 then _F(" - error\nCould not open %s for writing!\n", pki.cert.file) end
+      local len, error = mtev.write(fd, myself._cert)
+      mtev.close(fd)
+      if len ~= myself._cert:len() then
+        _F(" - error.\nError writing to %s: %s\n", pki.cert.file, error or "unkown error")
+      end
+    else
+      _P(" - unavailable.\n")
+      mtev.sleep(5)
+    end
+    pki = pki_info()
+  until pki.cert.exists
+  _P(" - ok.\n")
+
+  function update_pki_bits(url,file)
+    local rv, error = fetch_url_to_file(url, file, tonumber(0644,8))
+    if not rv then
+      local body = mtev.parsejson(error)
+      if body ~= nil then body = body:document() end
+      if type(body) == 'table' then
+        error = body.explanation or body.message or body.status or error
+      end
+      _F(" - error\nFailed to pull Circonus PKI data\n - from %s\n - to %s\n - error: %s\n",
+         url, file, error or "unknown error")
+    end
+  end
+
+  _P(" -- updating certificate authority")
+  update_pki_bits(circonus_api_url() .. "/pki/certificate?cn=" .. CAcn, pki.ca.file)
+  _P(" - ok\n")
+  _P(" -- updating certificate revocation lists")
+  update_pki_bits(circonus_api_url() .. "/pki/crl?cn=" .. CAcn, pki.crl,file)
+  _P(" - ok\n")
+end
+
+function do_task_provision()
+  local pki = pki_info()
+  local existing_cn = extract_subject()
+  local _, account = get_account()
+  get_brokers() -- sets the cached copies
+
+  --
+  -- First truth: we need a key
+  --
+  if not pki.key.exists then
+    _P(" -- generating RSA key...\n")
+    local rv, err = generate_key(pki.key.file)
+    if rv ~= 0 then _E("Error generating key: %s\n", err) end
+  end
+
+  --
+  -- Next it gets more complicated.  This might not be our first rodeo.
+  -- Perhaps we've been provisioned already or we started the process and
+  -- failed to finish it... that is detected here.A
+  --
+  local myself
+  if existing_cn ~= nil then
+    _, myself = get_broker(existing_cn)
+    if myself._status == 'unprovisioned' or pki.csr.data ~= myself.csr then
+      -- We generated a CSR to provision ourselves, but they never got it
+      _P(" ** incomplete provisioning, starting over...\n")
+      existing_cn = nil
+    end
+  end
+
+  --
+  -- We've found ourselves to be sufficiently provisioned to not "start from
+  -- scratch, so we'll use the existing CN and try to make some progress.
+  -- "sufficiently provisioned" means that we have a CSR and the Circonus API
+  -- also has that same CSR, so they know our intention.
+  --
+  if existing_cn ~= nil then
+    _E("This broker is already provisioned as %s\n", existing_cn)
+
+    --
+    -- It might be that we've just requested to update metadata such as
+    -- our IP address, name, tags or location
+    --
+    set_name = set_name or myself.noit_name
+    ip_address = ip_address or myself.ipaddress
+    -- Let's see if our metadata has changed, is so we'll PUT new info
+    if myself.noit_name ~= set_name or
+       myself.ipaddress ~= ip_address then
+      if ip_address == nil then
+        _F("We could not detemine your public IP address, please use -ip <ip>\n")
+      end
+      _P(" -- updating information\n")
+      local update_data = {
+        port = 43191,
+        rebuild = false,
+        ipaddress = ip_address,
+        csr = pki.csr.data
+      }
+      if set_name ~= nil then update_data.name = set_name end
+      local code, obj, body = provision_broker(existing_cn, update_data)
+      _, myself = get_broker(existing_cn)
+    end
+    do_fetch_certificate(myself)
+    os.exit(0)
+  end
+
+  if cn == nil then
+    cn = do_task_list() -- this just returns the first unprovisioned
+  end
+  if tablelength(brokers) < 1 or cn == nil then
+    _F("There are no broker slots available on this account.\n" ..
+       "Please visit your brokers page to add one.\n")
+  end
+
+  -- Now we generate a CSR and submit it.
+  if ip_address == nil then
+    _F("We could not detemine your public IP address, please use -ip <ip>\n")
+  end
+  _P(" -- generating CSR...\n")
+  local rv, err = generate_csr(cn,account.country_code,'',account_name)
+  if rv ~= 0 then
+    _F("Error creating certificate signing request:\n%s\n", err)
+  end
+  local existing_cn, csr_contents = extract_subject()
+  existing_cn = cn
+  code, myself = get_broker(existing_cn)
+  if set_name == nil then set_name = myself.name end
+
+  local code, obj, body = provision_broker(existing_cn, {
+    noit_name = set_name,
+    port = 43191,
+    rebuild = false,
+    ipaddress = ip_address,
+    csr = csr_contents
+  });
+
+  if code ~= 200 then
+    _F("Fatal error attempt to submit CSR...\n" .. (body or "<empty>"))
+  end
+  
+  return do_fetch_certificate(myself)
+end
+
+function main()
+  parse_cli()
+  API_TOKEN = circonus_api_token()
+  if API_TOKEN == nil then
+    _F("Missing CIRCONUS_API_TOKEN!\nPlease set it via:\n\n%s config set api-token <uuid>\n", prog)
+  end
+  os.exit(do_work())
+end
+
+function do_task_unprovision()
+  if cn == nil then cn = existing_cn end
+  if cn == nil then
+    _F("-U requires a cn to be specified (or this broker to be provisioned)\n")
+  end
+  return 2
+end
+
+function do_work()
+  if ip_address == nil then
+    _, ip_address = get_ip()
+  end
+
+  if task_list then do_task_list(_P) os.exit(0)
+  elseif task_provision then os.exit(do_task_provision())
+  elseif task_unprovision then os.exit(do_task_unprovision())
+  end
+
+  _F("Something went very wrong.\n")
+  return 2
+end

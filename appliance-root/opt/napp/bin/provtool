@@ -1,0 +1,24 @@
+#!/bin/sh
+
+LUAMTEV=/opt/circonus/bin/luamtev
+CONF=/opt/noit/prod/etc/provtool.conf
+USER=broker
+GROUP=broker
+
+set -o allexport
+if [ -r /opt/noit/prod/etc/noit.env ]; then
+	. /opt/noit/prod/etc/noit.env
+fi
+if [ -r /opt/noit/prod/etc/noit.local.env ]; then
+	. /opt/noit/prod/etc/noit.local.env
+fi
+set +o allexport
+
+# Just in case, chown this stuff
+for dir in $WRITE_PATHS; do
+	/bin/chown -R $USER:$GROUP $dir 2>/dev/null
+done
+
+exec $LUAMTEV -c $CONF -u $USER -g $GROUP \
+	prov $*
+exit 2
