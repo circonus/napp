@@ -3,12 +3,13 @@ module("prov", package.seeall)
 local HttpClient = require 'mtev.HttpClient'
 local API_KEY
 
-local task_provision, task_unprovision, task_list, cn, ip_address,
+local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
-      prog, debug, brokers, set_name, CAcn
+      prog, debug, brokers, set_name, set_long, set_lat, CAcn,
+      prefer_reverse
 
 prog = "provtool"
-CAcn = "Circonus%20Certificate%20Authority"
+prefer_reverse = 0
 CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus_api_token"
 CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
 
@@ -39,6 +40,13 @@ configs['googleanalytics/api-key'] = {
   path = "//circonus/googleanalytics//config/api_key",
   description = "Google Analytics API Key"
 }
+function extract_json_contents(text)
+  local doc = mtev.parsejson(text)
+  if doc == nil then return nil end
+  local obj = doc:document()
+  if obj == nil then return nil end
+  return obj.contents;
+end
 function do_config_get(key)
   if key == nil then
     local a = {}
@@ -66,29 +74,32 @@ function config_usage()
   for _,k in pairs(a) do
     local v = configs[k]
     _P("\t%s:\t%s\n", k, v.description)
-    if v.default then _P("\t\tdefault: %s\n", v.default) end
+    if v.default then _P("\t\t\t(default: %s)\n", v.default) end
   end
 end
 
 function usage()
   _P("%s usage:\n\n", prog)
-  _P("%s config get <key>\n", prog)
-  _P("%s config set <key> <value>\n", prog)
+  _P("# Local configuration\n\n")
+  _P("  %s config get <key>\n", prog)
+  _P("  %s config set <key> <value>\n", prog)
   config_usage()
   _P("\n")
-  _P("%s list\n", prog)
-  _P("\tList all brokers configured on your account\n")
+  _P("# Listing brokers\n\n")
+  _P("  %s list\n", prog)
   _P("\n")
-  _P("%s provision [-cn <cn>] [-ip <ip>] [-name <name>]\n", prog)
-  _P("\tProvision this broker\n")
+  _P("# Provision this broker\n\n")
+  _P("  %s provision [-cn <cn>] [-ip <ip>] [-name <name>]\n", prog)
   _P("\t-cn <cn>\tspecify a broker CN, default first unprovisioned\n")
   _P("\t-ip <IP>\tset the broker IP address to which Circonus will connect\n")
+  _P("\t-long <longitude>\tset the broker's longitude\n")
+  _P("\t-lat <latitude>\tset the broker's latitude\n")
   _P("\t-name <name>\tan optional name for the broker\n")
+  _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
   _P("\n")
-  _P("\n")
-  _P("%s unprovision [-c <cn>]\n", prog)
-  _P("\tRetire the current broker (or another broker)\n")
-  _P("\t-c <cn>\tunprovision a broker by CN. BE CAREFUL!\n")
+  _P("# Rebuilding a broker's configuration\n\n")
+  _P("  %s rebuild [-c <cn>]\n", prog)
+  _P("\t-c <cn>\trebuild an arbitrary cn [deault: this machine].\n")
   _P("\n")
 end
 
@@ -112,13 +123,15 @@ function write_contents_if_changed(file, body, mode)
   return false
 end
 
-function fetch_url_to_file(url, file, mode)
+function fetch_url_to_file(url, file, mode, transform)
   local code, body = fetch_url(url)
   if code ~= 200 then return false, body end
-  if body:len() == 0 then return false, "blank document" end
+  if transform ~= nil then body = transform(body) end
+  if body == nil or body:len() == 0 then return false, "blank document" end
   if not write_contents_if_changed(file, body, mode) then
     return false
   end
+  return true
 end
 
 function nextargs_iter()
@@ -154,8 +167,11 @@ function parse_cli()
     opts.cn = function(n) cn = n() end
     opts.ip = function(n) ip_address = n() end
     opts.name = function(n) set_name = n() end
-  elseif command == 'unprovision' then
-    task_unprovision = true
+    opts.long = function(n) set_long = n() end
+    opts.nat = function(n) prefer_reverse = 1 end
+    opts.lat = function(n) set_lat = n() end
+  elseif command == 'rebuild' then
+    task_rebuild = true
     opts.cn = function(n) cn = n() end
   else usage() os.exit(2)
   end
@@ -328,11 +344,11 @@ function get_brokers(type)
   return code, obj, body
 end
 function get_broker(cn)
-  return HTTP("GET", _API("/v2/provision_broker/" .. cn))
+  return HTTP("GET", _API("/v2/provision_broker/" .. mtev.extras.url_encode(cn)))
 end
 function provision_broker(cn, data)
   local payload = mtev.tojson(data):tostring()
-  return HTTP("PUT", _API("/v2/provision_broker/" .. cn), payload)
+  return HTTP("PUT", _API("/v2/provision_broker/" .. mtev.extras.url_encode(cn)), payload)
 end
 
 function generate_key(keyfile)
@@ -413,6 +429,7 @@ function do_task_list(_print)
   local avail
   local count = 0
   local code, obj = get_brokers()
+  local existing_cn = extract_subject()
   if _print == nil then _print = function() return end end
   for _,group in pairs(obj) do
     _print("%s== Group: %s ==\n", count > 0 and "\n" or "", group._name)
@@ -420,7 +437,11 @@ function do_task_list(_print)
       if avail == nil and broker.status == 'unprovisioned' then
         avail = broker.cn
       end
-      _print("  %s is %s\n", broker.cn, broker.status)
+      local mine_str = ""
+      if existing_cn ~= nil and existing_cn == broker.cn then
+        mine_str = " <- current node"
+      end
+      _print("  %s is %s%s\n", broker.cn, broker.status, mine_str)
       count = count + 1
     end
   end
@@ -453,7 +474,11 @@ function do_fetch_certificate(myself)
   _P(" - ok.\n")
 
   function update_pki_bits(url,file)
-    local rv, error = fetch_url_to_file(url, file, tonumber(0644,8))
+    if file == nil then
+      _P(" - skipped\n")
+      return
+    end
+    local rv, error = fetch_url_to_file(url, file, tonumber(0644,8), extract_json_contents)
     if not rv then
       local body = mtev.parsejson(error)
       if body ~= nil then body = body:document() end
@@ -466,10 +491,10 @@ function do_fetch_certificate(myself)
   end
 
   _P(" -- updating certificate authority")
-  update_pki_bits(circonus_api_url() .. "/pki/certificate?cn=" .. CAcn, pki.ca.file)
+  update_pki_bits(circonus_api_url() .. "/pki/ca.crt", pki.ca.file)
   _P(" - ok\n")
   _P(" -- updating certificate revocation lists")
-  update_pki_bits(circonus_api_url() .. "/pki/crl?cn=" .. CAcn, pki.crl,file)
+  update_pki_bits(circonus_api_url() .. "/pki/ca.crl", pki.crl.file)
   _P(" - ok\n")
 end
 
@@ -520,7 +545,10 @@ function do_task_provision()
     ip_address = ip_address or myself.ipaddress
     -- Let's see if our metadata has changed, is so we'll PUT new info
     if myself.noit_name ~= set_name or
-       myself.ipaddress ~= ip_address then
+       myself.ipaddress ~= ip_address or
+       myself.longitude ~= set_long or
+       myself.latitude ~= set_lat or
+       myself.prefer_reverse_connection ~= prefer_reverse then
       if ip_address == nil then
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
       end
@@ -531,7 +559,10 @@ function do_task_provision()
         ipaddress = ip_address,
         csr = pki.csr.data
       }
-      if set_name ~= nil then update_data.name = set_name end
+      if set_name ~= nil then update_data.noit_name = set_name end
+      if set_long ~= nil then update_data.longitude = set_long end
+      if set_lat ~= nil then update_data.latitude = set_lat end
+      update_data.prefer_reverse_connection = prefer_reverse
       local code, obj, body = provision_broker(existing_cn, update_data)
       _, myself = get_broker(existing_cn)
     end
@@ -566,6 +597,7 @@ function do_task_provision()
     port = 43191,
     rebuild = false,
     ipaddress = ip_address,
+    prefer_reverse_connection = prefer_reverse,
     csr = csr_contents
   });
 
@@ -585,11 +617,13 @@ function main()
   os.exit(do_work())
 end
 
-function do_task_unprovision()
+function do_task_rebuild()
+  local existing_cn = extract_subject()
   if cn == nil then cn = existing_cn end
   if cn == nil then
-    _F("-U requires a cn to be specified (or this broker to be provisioned)\n")
+    _F("rebuild requires a cn to be specified (or this broker to be provisioned)\n")
   end
+  local code, obj, body = provision_broker(cn, { rebuild = true })
   return 2
 end
 
@@ -600,7 +634,7 @@ function do_work()
 
   if task_list then do_task_list(_P) os.exit(0)
   elseif task_provision then os.exit(do_task_provision())
-  elseif task_unprovision then os.exit(do_task_unprovision())
+  elseif task_rebuild then os.exit(do_task_rebuild())
   end
 
   _F("Something went very wrong.\n")
