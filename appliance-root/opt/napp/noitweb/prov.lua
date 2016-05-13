@@ -15,7 +15,7 @@ CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url
 
 function _P(...) mtev.log("stdout", ...) end
 function _E(...) mtev.log("error", ...) end
-function _F(...) mtev.log("error", ...) os.exit(2) end
+function _F(...) mtev.log("error", "Fatal Error:\n\n") mtev.log("error", ...) os.exit(2) end
 function _D(...) if debug then mtev.log("debug/cli", ...) end end
 
 local configs = { }
@@ -523,6 +523,18 @@ function do_task_provision()
   local existing_cn = extract_subject()
   local _, account = get_account()
   get_brokers() -- sets the cached copies
+
+  --
+  -- If a cn was specified on the command line and it
+  -- isn't in the list of broker cns, we can stop now.
+  --
+
+  if cn ~= nil then
+    if find_broker(cn) == nil then
+      _F("\"%s\" was specified as the cn, but that cn isn't in the list of brokers.\n\n" ..
+         "Use 'provtool list' to see brokers.\n" , cn)
+    end
+  end
 
   --
   -- First truth: we need a key
