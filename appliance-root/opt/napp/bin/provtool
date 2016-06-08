@@ -4,6 +4,8 @@ LUAMTEV=/opt/circonus/bin/luamtev
 CONF=/opt/noit/prod/etc/provtool.conf
 USER=broker
 GROUP=broker
+HWLOC_HIDE_ERRORS=1
+export HWLOC_HIDE_ERRORS
 
 set -o allexport
 if [ -r /opt/noit/prod/etc/noit.env ]; then
