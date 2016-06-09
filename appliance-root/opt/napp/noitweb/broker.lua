@@ -3,7 +3,7 @@ module(..., package.seeall)
 local sessions = {}
 local cached_agent_info = {}
 
-local HttpClient = require('noit.HttpClient') 
+local HttpClient = require('mtev.HttpClient') 
 local json = require('json')
 local noit = require('noit')
 local mtev = require('mtev')
@@ -41,8 +41,8 @@ function fetch_url(url)
     target = hostwoport
     port = aport
   end
-  if not noit.valid_ip(target) then
-    local dns = noit.dns()
+  if not mtev.valid_ip(target) then
+    local dns = mtev.dns()
     local r = dns:lookup(host)
     if r == nil or r.a == nil then return false, nil, "could not resolve host" end
     target = r.a
@@ -77,10 +77,10 @@ function fetch_url_to_file(url, file, mode, transform)
     if data == body then return true end
   end
 
-  local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  local fd = mtev.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
   if fd >= 0 then
-    local len, error = noit.write(fd, body)
-    noit.close(fd)
+    local len, error = mtev.write(fd, body)
+    mtev.close(fd)
     if len ~= body:len() then return false, "failed write: " .. (error or "unknown") end
     return true, "updated " .. file
   end
@@ -97,14 +97,14 @@ function old_fetchCA(type)
   local xpath = '//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/'
   local file
   if type == "ca" then
-    file = noit.conf(xpath .. "ca_chain")
+    file = mtev.conf(xpath .. "ca_chain")
   elseif type == "crl" then
-    file = noit.conf(xpath .. "crl")
+    file = mtev.conf(xpath .. "crl")
   else
     return false, "unsupported type"
   end
   if file ~= nil then
-    noit.log("error", "Fetching -> " .. try_url .. "\n")
+    mtev.log("error", "Fetching -> " .. try_url .. "\n")
     local rv, error = fetch_url_to_file(try_url, file, tonumber(0644,8))
     if rv then return true end
     return false, error
@@ -175,7 +175,7 @@ function get_agent_info(subject)
       cached_agent_info[subject] = nil
     end
   else
-    noit.log("error", "Failed to fetch broker info in get_agent_info: %d\n", code)
+    mtev.log("error", "Failed to fetch broker info in get_agent_info: %d\n", code)
     cached_agent_info[subject] = nil
   end
   return code, body
@@ -193,30 +193,30 @@ function get_cached_agent_info(subject)
 end
 
 function circonus_url()
-  return noit.conf_get_string("/noit/circonus/appliance//credentials/circonus_url")
+  return mtev.conf_get_string("/noit/circonus/appliance//credentials/circonus_url")
 end
 function circonus_api_token()
   return mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
 end
 function circonus_api_url()
-  return noit.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
+  return mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
 end
 
 function pki_info()
-  local keyfile = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
+  local keyfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
   local csrfile = keyfile:gsub("%.key$", ".csr")
-  local certfile = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
-  local crl = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
-  local ca_chain = noit.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
+  local certfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
+  local crl = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
+  local ca_chain = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
 
   local details = {}
   local needs = false
 
-  details["crl"] = { file=crl, exists=not not noit.stat(crl) }
-  details["key"] = { file=keyfile, exists=not not noit.stat(keyfile) }
-  details["csr"] = { file=csrfile, exists=not not noit.stat(csrfile) }
-  details["cert"] = { file=certfile, exists=not not noit.stat(certfile) }
-  details["ca"] = { file=ca_chain, exists=not not noit.stat(ca_chain) }
+  details["crl"] = { file=crl, exists=not not mtev.stat(crl) }
+  details["key"] = { file=keyfile, exists=not not mtev.stat(keyfile) }
+  details["csr"] = { file=csrfile, exists=not not mtev.stat(csrfile) }
+  details["cert"] = { file=certfile, exists=not not mtev.stat(certfile) }
+  details["ca"] = { file=ca_chain, exists=not not mtev.stat(ca_chain) }
   return details
 end
 
@@ -230,8 +230,8 @@ function do_periodically(f, period)
   return function()
     while true do
       local rv, err = pcall(f)
-      if not rv then noit.log("error", "lua --> " .. err .. "\n") end
-      noit.sleep(period)
+      if not rv then mtev.log("error", "lua --> " .. err .. "\n") end
+      mtev.sleep(period)
     end
   end
 end
@@ -247,10 +247,10 @@ function write_contents_if_changed(file, body, mode)
     inp:close();
     if body == data then return true, false end
   end
-  local fd = noit.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  local fd = mtev.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
   if fd >= 0 then
-    local len, error = noit.write(fd, body)
-    noit.close(fd)
+    local len, error = mtev.write(fd, body)
+    mtev.close(fd)
     if len ~= body:len() then return false end
     return true, true
   end
@@ -258,11 +258,11 @@ function write_contents_if_changed(file, body, mode)
 end
 
 function refresh_cert()
-  noit.log("debug", "Circonus certificate refresh\n")
+  mtev.log("debug", "Circonus certificate refresh\n")
   while true do
     local subj = get_subject()
     if subj == nil then
-      noit.log("debug", "No subject set (yet)\n")
+      mtev.log("debug", "No subject set (yet)\n")
     else
       local code, body = get_agent_info(subj)
       if code == 200 then
@@ -271,16 +271,16 @@ function refresh_cert()
         if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
           local success, changed = 
             write_contents_if_changed(pki_info.cert.file, info.cert)
-          if not success then noit.log("error", "Error: failed to write %s\n", pki_info.cert.file)
-          elseif changed then noit.log("error", "updated %s\n", pki_info.cert.file)
+          if not success then mtev.log("error", "Error: failed to write %s\n", pki_info.cert.file)
+          elseif changed then mtev.log("error", "updated %s\n", pki_info.cert.file)
           end
         else
           if info == nil then
-            noit.log("error", "Error: Failed to decode agent info json in get_agent_info\n")
+            mtev.log("error", "Error: Failed to decode agent info json in get_agent_info\n")
           elseif info.cert == nil then
-            noit.log("error", "Error: No agent certificate in get_agent_info\n")
+            mtev.log("error", "Error: No agent certificate in get_agent_info\n")
           elseif info.cert:len() <= 0 then
-            noit.log("error", "Error: Agent certificate has invalid length in get_agent_info\n")
+            mtev.log("error", "Error: Agent certificate has invalid length in get_agent_info\n")
           end
         end
       end
@@ -288,17 +288,17 @@ function refresh_cert()
       if info.cert.exists then
         break 
       end
-      noit.log("error", "Circonus certificate non-existent, polling(5)\n")
+      mtev.log("error", "Circonus certificate non-existent, polling(5)\n")
     end
-    noit.sleep(5)
+    mtev.sleep(5)
   end
 end
 
 function filtersets_maintain()
   local cnt = noit.filtersets_cull()
   if cnt > 0 then
-    noit.log("error", "Culling %s unused filtersets.\n", cnt)
-    noit.conf_save()
+    mtev.log("error", "Culling %s unused filtersets.\n", cnt)
+    mtev.conf_save()
   end
 end
 
@@ -318,18 +318,18 @@ function update_reverse_sockets(info)
 
   -- if the prefer_reverse_connection flag isn't set, we have no stratcons
   if info.prefer_reverse_connection ~= 1 then
-    noit.log("debug", "prefer_reverse_connection is off\n")
+    mtev.log("debug", "prefer_reverse_connection is off\n")
     info._stratcons = {}
   end
   for i, key in pairs(info._stratcons) do
     -- resolve the host, if needed
-    if not noit.valid_ip(key.host) then
-      local dns = noit.dns()
+    if not mtev.valid_ip(key.host) then
+      local dns = mtev.dns()
       local r = dns:lookup(key.host)
       if r == nil or r.a == nil then
         r = dns:lookup(key.host, "AAAA")
         if r == nil or r.aaaa == nil then
-          noit.log("error", "failed to lookup stratcon '%s' for reverse socket use\n", key.host)
+          mtev.log("error", "failed to lookup stratcon '%s' for reverse socket use\n", key.host)
         end
       end
       if r ~= nil then key.host = r.a or r.aaaa end
@@ -341,8 +341,8 @@ function update_reverse_sockets(info)
   for id, details in pairs(reverse_sockets) do
     if wanted[id] == nil then
       -- turn it down
-      noit.log("error", "Turning down reverse connection: '%s'\n", id)
-      noit.reverse_stop(details.host,details.port)
+      mtev.log("error", "Turning down reverse connection: '%s'\n", id)
+      mtev.reverse_stop(details.host,details.port)
       reverse_sockets[id] = nil
     end
   end
@@ -351,8 +351,8 @@ function update_reverse_sockets(info)
   for id, details in pairs(wanted) do
     if reverse_sockets[id] == nil then
       -- turn it up
-      noit.log("error", "Turning up reverse connection: '%s'\n", id)
-      noit.reverse_start(details.host,details.port,
+      mtev.log("error", "Turning up reverse connection: '%s'\n", id)
+      mtev.reverse_start(details.host,details.port,
                          sslconfig,
                          { cn = details.cn, 
                            endpoint = subject,
@@ -364,11 +364,11 @@ function update_reverse_sockets(info)
 end
 
 function reverse_socket_maintain()
-  noit.log("debug", "Checking reverse socket configuration\n")
+  mtev.log("debug", "Checking reverse socket configuration\n")
   while true do
     local subj = get_subject()
     if subj == nil then
-      noit.log("debug", "No subject set (yet)\n")
+      mtev.log("debug", "No subject set (yet)\n")
     else
       local code, body = get_cached_agent_info(subj)
       if code == 200 then
@@ -379,14 +379,14 @@ function reverse_socket_maintain()
         end
       end
     end
-    noit.sleep(5)
+    mtev.sleep(5)
   end
 end
 
 function start_upkeep()
-  noit.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
-  noit.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
-  noit.coroutine_spawn(do_periodically(refresh_cert, 3600))
-  noit.coroutine_spawn(do_periodically(function() fetchCA('ca') end, 3600))
-  noit.coroutine_spawn(do_periodically(function() fetchCA('crl') end, 3600))
+  mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
+  mtev.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
+  mtev.coroutine_spawn(do_periodically(refresh_cert, 3600))
+  mtev.coroutine_spawn(do_periodically(function() fetchCA('ca') end, 3600))
+  mtev.coroutine_spawn(do_periodically(function() fetchCA('crl') end, 3600))
 end
