@@ -193,7 +193,8 @@ function get_cached_agent_info(subject)
 end
 
 function circonus_url()
-  return mtev.conf_get_string("/noit/circonus/appliance//credentials/circonus_url")
+  return mtev.conf_get_string("/noit/circonus/appliance//credentials/circonus_url") or
+    "https://login.circonus.com"
 end
 function circonus_api_token()
   return mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
