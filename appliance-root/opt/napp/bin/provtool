@@ -22,5 +22,5 @@ for dir in $WRITE_PATHS; do
 done
 
 exec $LUAMTEV -c $CONF -u $USER -g $GROUP \
-	/opt/napp/noitweb/prov.lua $*
+	prov $*
 exit 2
