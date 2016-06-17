@@ -37,7 +37,7 @@ function fetch_url(url)
   target = host
   if schema == "https" then port = 443 end
   local hostwoport, aport = host:match("^(.*):(%d+)$")
-  if tonumber(aport) > 0 then
+  if (tonumber(aport) or 0) > 0 then
     target = hostwoport
     port = aport
   end
