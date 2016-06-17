@@ -37,13 +37,13 @@ function fetch_url(url)
   target = host
   if schema == "https" then port = 443 end
   local hostwoport, aport = host:match("^(.*):(%d+)$")
-  if (aport or 0) > 0 then
+  if tonumber(aport) > 0 then
     target = hostwoport
     port = aport
   end
   if not noit.valid_ip(target) then
     local dns = mtev.dns()
-    local r = dns:lookup(host)
+    local r = dns:lookup(target)
     if r == nil or r.a == nil then return false, nil, "could not resolve host" end
     target = r.a
   end
@@ -193,8 +193,11 @@ function get_cached_agent_info(subject)
 end
 
 function circonus_url()
-  return mtev.conf_get_string("/noit/circonus/appliance//credentials/circonus_url") or
-    "https://login.circonus.com"
+  local fallback = nil
+  if circonus_api_token() == nil then
+    fallback = "https://login.circonus.com"
+  end
+  return mtev.conf_get_string("/noit/circonus/appliance//credentials/circonus_url") or fallback
 end
 function circonus_api_token()
   return mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
