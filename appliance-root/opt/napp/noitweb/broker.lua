@@ -169,6 +169,11 @@ function get_agent_info(subject)
   if code == 200 and body ~= nil then
     local info = json.decode(body)
     --only cache if everything is good
+    if info ~= nil and info.stratcons ~= nil then
+      info._stratcons = info.stratcons
+      body = mtev.tojson(info):tostring()
+      cached_agent_info[subject] = body
+    end
     if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
       cached_agent_info[subject] = body
     else
