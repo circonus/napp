@@ -451,9 +451,13 @@ function do_task_list(_print)
   local code, obj = get_brokers()
   local existing_cn = extract_subject()
   if _print == nil then _print = function() return end end
+  local fmt = "| %-40s | %-31s |\n"
+  _print(fmt, "Group -> CN", "Status")
+  _print("------------------------------------------------------------------------------\n")
   for _,group in pairs(obj) do
-    _print("%s== Group: %s ==\n", count > 0 and "\n" or "", group._name)
+    local use_group = tablelength(group._details) > 1
     for _,broker in pairs(group._details) do
+      if use_group then _print(fmt, group._name, "") end
       if avail == nil and broker.status == 'unprovisioned' then
         avail = broker.cn
       end
@@ -461,9 +465,10 @@ function do_task_list(_print)
       if existing_cn ~= nil and existing_cn == broker.cn then
         mine_str = " <- current node"
       end
-      _print("  %s is %s%s\n", broker.cn, broker.status, mine_str)
+      _print(fmt, "  -> " .. broker.cn, broker.status .. mine_str)
       count = count + 1
     end
+    _print("------------------------------------------------------------------------------\n")
   end
   if count < 1 then
     _print("No brokers found\n")
