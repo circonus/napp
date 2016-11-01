@@ -329,7 +329,7 @@ function HTTP(method, url, payload, silent, _pp)
 
   if string.find(url, circonus_api_url()) == 1 then
     if client.code == 403 then
-      _F("Permission denied! (bad CIRCONUS_AUTH_TOKEN?\n")
+      _F("Permission denied! (bad CIRCONUS_AUTH_TOKEN?)\n")
     end
     if client.code == 401 then
       mtev.log("error", "Looks like your token is pending validation.\n")
@@ -632,6 +632,8 @@ function do_task_provision()
   local code, obj, body = provision_broker(existing_cn, {
     noit_name = set_name,
     port = 43191,
+    latitude = set_lat,
+    longitude = set_long,
     rebuild = false,
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
