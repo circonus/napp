@@ -480,7 +480,7 @@ function do_fetch_certificate(myself)
   local cn = myself._cid
   _P(" -- attempting to fetch certificate for %s", cn)
   local pki = pki_info()
-  repeat 
+  repeat
     _, myself = get_broker(cn)
     if myself._cert ~= nil then
       local fd = mtev.open(pki.cert.file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), tonumber(0644,8))
@@ -586,7 +586,7 @@ function do_task_provision()
        myself.longitude ~= set_long or
        myself.latitude ~= set_lat or
        myself.prefer_reverse_connection ~= prefer_reverse then
-      if ip_address == nil then
+      if ip_address == nil and (myself.prefer_reverse_connection ~= 1 or prefer_reverse ~= 1) then
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
       end
       _P(" -- updating information\n")
@@ -616,7 +616,7 @@ function do_task_provision()
   end
 
   -- Now we generate a CSR and submit it.
-  if ip_address == nil then
+  if ip_address == nil and prefer_reverse ~= 1 then
     _F("We could not detemine your public IP address, please use -ip <ip>\n")
   end
   _P(" -- generating CSR...\n")
@@ -641,7 +641,7 @@ function do_task_provision()
   if code ~= 200 then
     _F("Fatal error attempt to submit CSR...\n" .. (body or "<empty>"))
   end
-  
+
   return do_fetch_certificate(myself)
 end
 
