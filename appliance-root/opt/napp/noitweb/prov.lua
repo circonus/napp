@@ -6,7 +6,7 @@ local API_KEY
 local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
-      prefer_reverse
+      prefer_reverse, set_ext_host, set_ext_port
 
 prog = "provtool"
 prefer_reverse = 0
@@ -115,6 +115,8 @@ function usage()
   _P("\t-long <longitude>\tset the broker's longitude\n")
   _P("\t-lat <latitude>\tset the broker's latitude\n")
   _P("\t-name <name>\tan optional name for the broker\n")
+  _P("\t-ext_host <name>\tpublic facing name for broker\n")
+  _P("\t-ext_port <port>\tpublic facing port for broker\n")
   _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
   _P("\n")
   _P("# Rebuilding a broker's configuration\n\n")
@@ -190,6 +192,8 @@ function parse_cli()
     opts.long = function(n) set_long = n() end
     opts.nat = function(n) prefer_reverse = 1 end
     opts.lat = function(n) set_lat = n() end
+    opts.ext_host = function(n) set_ext_host = n() end
+    opts.ext_port = function(n) set_ext_port = n() end
   elseif command == 'rebuild' then
     task_rebuild = true
     opts.cn = function(n) cn = n() end
@@ -585,6 +589,8 @@ function do_task_provision()
        myself.ipaddress ~= ip_address or
        myself.longitude ~= set_long or
        myself.latitude ~= set_lat or
+       myself.ext_host ~= set_ext_host or
+       myself.ext_port ~= set_ext_port or
        myself.prefer_reverse_connection ~= prefer_reverse then
       if ip_address == nil and (myself.prefer_reverse_connection ~= 1 or prefer_reverse ~= 1) then
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
@@ -599,6 +605,8 @@ function do_task_provision()
       if set_name ~= nil then update_data.noit_name = set_name end
       if set_long ~= nil then update_data.longitude = set_long end
       if set_lat ~= nil then update_data.latitude = set_lat end
+      if set_ext_host ~= nil then update_data.ext_host = set_ext_host end
+      if set_ext_port ~= nil then update_data.ext_port = set_ext_port end
       update_data.prefer_reverse_connection = prefer_reverse
       local code, obj, body = provision_broker(existing_cn, update_data)
       _, myself = get_broker(existing_cn)
@@ -634,6 +642,8 @@ function do_task_provision()
     port = 43191,
     latitude = set_lat,
     longitude = set_long,
+    external_host => set_ext_host,
+    external_port => set_ext_port,
     rebuild = false,
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
