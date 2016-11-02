@@ -118,8 +118,8 @@ function usage()
   _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
   _P("\n")
   _P("# Rebuilding a broker's configuration\n\n")
-  _P("  %s rebuild [-c <cn>]\n", prog)
-  _P("\t-c <cn>\trebuild an arbitrary cn [deault: this machine].\n")
+  _P("  %s rebuild [-cn <cn>]\n", prog)
+  _P("\t-cn <cn>\trebuild an arbitrary cn [deault: this machine].\n")
   _P("\n")
 end
 
