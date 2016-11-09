@@ -6,10 +6,11 @@ local API_KEY
 local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
-      prefer_reverse, set_ext_host, set_ext_port
+      prefer_reverse, set_ext_host, set_ext_port, make_public
 
 prog = "provtool"
 prefer_reverse = 0
+make_public = 0
 CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus_api_token"
 CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
 
@@ -121,7 +122,7 @@ function usage()
   _P("\n")
   _P("# Rebuilding a broker's configuration\n\n")
   _P("  %s rebuild [-cn <cn>]\n", prog)
-  _P("\t-cn <cn>\trebuild an arbitrary cn [deault: this machine].\n")
+  _P("\t-cn <cn>\trebuild an arbitrary cn [default: this machine].\n")
   _P("\n")
 end
 
@@ -194,6 +195,7 @@ function parse_cli()
     opts.lat = function(n) set_lat = n() end
     opts.ext_host = function(n) set_ext_host = n() end
     opts.ext_port = function(n) set_ext_port = n() end
+    opts.public = function(n) make_public = 1 end
   elseif command == 'rebuild' then
     task_rebuild = true
     opts.cn = function(n) cn = n() end
@@ -362,8 +364,15 @@ function get_account()
   return HTTP("GET", _API("/v2/account/current"))
 end
 function get_brokers(type)
-  if type == nil then type = "enterprise" end
-  local code, obj, body = HTTP("GET", _API("/v2/broker?f__type=" .. type))
+  local code, obj, body
+  local _, account = get_account()
+  -- superadmin token gets to see all brokers
+  if (account._cid == "/account/1") then
+    code, obj, body = HTTP("GET", _API("/v2/broker"))
+  else
+    if type == nil then type = "enterprise" end
+    code, obj, body = HTTP("GET", _API("/v2/broker?f__type=" .. type))
+  end
   brokers = obj
   return code, obj, body
 end
@@ -608,6 +617,7 @@ function do_task_provision()
       if set_ext_host ~= nil then update_data.ext_host = set_ext_host end
       if set_ext_port ~= nil then update_data.ext_port = set_ext_port end
       update_data.prefer_reverse_connection = prefer_reverse
+      update_data.make_public = make_public
       local code, obj, body = provision_broker(existing_cn, update_data)
       _, myself = get_broker(existing_cn)
     end
@@ -647,7 +657,8 @@ function do_task_provision()
     rebuild = false,
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
-    csr = csr_contents
+    csr = csr_contents,
+    make_public = make_public
   });
 
   if code ~= 200 then
