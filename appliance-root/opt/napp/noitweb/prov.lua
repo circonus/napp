@@ -364,8 +364,15 @@ function get_account()
   return HTTP("GET", _API("/v2/account/current"))
 end
 function get_brokers(type)
-  if type == nil then type = "enterprise" end
-  local code, obj, body = HTTP("GET", _API("/v2/broker?f__type=" .. type))
+  local code, obj, body
+  local _, account = get_account()
+  -- superadmin token gets to see all brokers
+  if (account._cid == "/account/1") then
+    code, obj, body = HTTP("GET", _API("/v2/broker"))
+  else
+    if type == nil then type = "enterprise" end
+    code, obj, body = HTTP("GET", _API("/v2/broker?f__type=" .. type))
+  end
   brokers = obj
   return code, obj, body
 end
