@@ -7,25 +7,25 @@
       <default_ca_chain>/opt/noit/prod/etc/default-ca-chain.crt</default_ca_chain>
     </config>
   </eventer>
-  <include file="circonus-security.conf" snippet="true"/>
-  <include file="circonus-logs.conf" snippet="true"/>
+  <include file="circonus-security.conf" snippet="true" readonly="true"/>
+  <include file="circonus-logs.conf" snippet="true" readonly="true"/>
   <modules directory="/opt/noit/prod/libexec/noit">
     <include file="circonus-modules.conf"/>
   </modules>
-  <include file="circonus-listeners.conf" snippet="true"/>
+  <include file="circonus-listeners.conf" snippet="true" readonly="true"/>
 
   <checks max_initial_stutter="60000" filterset="default" backingstore="/opt/noit/prod/etc/checks"/>
   <filtersets>
-    <include file="circonus-filtersets.conf"/>
+    <include file="circonus-filtersets.conf" readonly="true"/>
     <circonus backingstore="/opt/noit/prod/etc/filtersets"/>
   </filtersets>
 
-  <include file="circonus-rest.conf" snippet="true"/>
+  <include file="circonus-rest.conf" snippet="true" readonly="true"/>
   <circonus>
     <appliance>
-      <include file="circonus-appliance.conf" snippet="true"/>
-      <include file="circonus-credentials.conf" snippet="true"/>
+      <include file="circonus-appliance.conf" snippet="true" readonly="true"/>
+      <include file="circonus-credentials.conf" snippet="true" readonly="true"/>
     </appliance>
-    <include file="circonus-custom.conf" snippet="true"/>
+    <include file="circonus-custom.conf" snippet="true" readonly="true"/>
   </circonus>
 </noit>
