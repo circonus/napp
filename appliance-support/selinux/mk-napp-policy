@@ -1,4 +1,0 @@
-#!/bin/sh
-
-checkmodule -M -m -o napp.mod napp.te
-semodule_package -o napp.pp -m napp.mod
