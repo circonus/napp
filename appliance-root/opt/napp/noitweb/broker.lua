@@ -149,18 +149,22 @@ function get_agent_info(subject)
   local cn_encoded = mtev.extras.url_encode(subject)
 
   -- new v2 API
-  local success, code, body =
-    fetch_url(circonus_api_url() .. "/v2/provision_broker/" .. cn_encoded)
-  if code == 200 and body ~= nil then
-    local obj = mtev.parsejson(body):document() or {}
-    cached_agent_info[subject] = nil
-    if obj ~= nil and obj._cert ~= nil and obj._cert:len() > 0 then
-      -- move this from '_cert' to 'cert' to ease code change
-      obj.cert = obj._cert
-      body = mtev.tojson(obj):tostring()
-      cached_agent_info[subject] = body
+  if circonus_api_token() ~= nil then
+    local success, code, body =
+      fetch_url(circonus_api_url() .. "/v2/provision_broker/" .. cn_encoded)
+    if code == 200 and body ~= nil then
+      local obj = mtev.parsejson(body):document() or {}
+      cached_agent_info[subject] = nil
+      if obj ~= nil and obj._cert ~= nil and obj._cert:len() > 0 then
+        -- move this from '_cert' to 'cert' to ease code change
+        obj.cert = obj._cert
+        body = mtev.tojson(obj):tostring()
+        cached_agent_info[subject] = body
+      end
+      return code, body
+    else
+      mtev.log("error", "Failed to fetch broker info in get_agent_info using v2 API: %d\n", code)
     end
-    return code, body
   end
   -- can we fallback to an old method?
   if circonus_url() == nil then return code, body end
@@ -182,7 +186,7 @@ function get_agent_info(subject)
       cached_agent_info[subject] = nil
     end
   else
-    mtev.log("error", "Failed to fetch broker info in get_agent_info: %d\n", code)
+    mtev.log("error", "Failed to fetch broker info in get_agent_info using v1 API: %d\n", code)
     cached_agent_info[subject] = nil
   end
   return code, body
