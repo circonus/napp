@@ -8,6 +8,8 @@ local json = require('json')
 local noit = require('noit')
 local mtev = require('mtev')
 
+jit.off()
+
 local CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus_api_token"
 local CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
 
