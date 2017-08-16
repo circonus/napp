@@ -51,7 +51,8 @@ function fetch_url(url)
   end
 
   local headers = { Host = host }
-  if string.find(url, circonus_api_url()) == 1 then
+  local escaped_circonus_api_url = circonus_api_url():gsub("([^%w])", "%%%1")
+  if string.find(url, escaped_circonus_api_url) == 1 then
     headers["X-Circonus-Auth-Token"] = circonus_api_token()
     headers["X-Circonus-App-Name"] = "broker-provision"
     headers["Accept"] = "application/json"
