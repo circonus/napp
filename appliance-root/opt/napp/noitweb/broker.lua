@@ -51,7 +51,7 @@ function fetch_url(url)
   end
 
   local headers = { Host = host }
-  if string.find(url, circonus_api_url()) == 1 then
+  if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     headers["X-Circonus-Auth-Token"] = circonus_api_token()
     headers["X-Circonus-App-Name"] = "broker-provision"
     headers["Accept"] = "application/json"

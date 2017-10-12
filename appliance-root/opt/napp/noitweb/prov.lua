@@ -280,7 +280,7 @@ function HTTP(method, url, payload, silent, _pp)
   local headers = {}
   local in_headers = {}
 
-  if string.find(url, circonus_api_url()) == 1 then
+  if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     headers["X-Circonus-Auth-Token"] = API_TOKEN
     headers["X-Circonus-App-Name"] = "broker-provision"
   end
@@ -333,7 +333,7 @@ function HTTP(method, url, payload, silent, _pp)
   local rv = client:do_request(method, uri, headers, payload, "1.1")
   client:get_response(1024000)
 
-  if string.find(url, circonus_api_url()) == 1 then
+  if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     if client.code == 403 then
       _F("Permission denied! (bad CIRCONUS_AUTH_TOKEN?)\n")
     end
