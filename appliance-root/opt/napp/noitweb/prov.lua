@@ -327,12 +327,16 @@ function get_ip()
 end
 
 function get_account()
-  return HTTP("GET", _API("/v2/account/current"))
+  local code, obj = HTTP("GET", _API("/v2/account/current"))
+  if not obj then
+    _F("Could not retrieve account information. Is api-url set correctly?\n")
+  end
+  return obj
 end
 
 function get_brokers(type)
   local code, obj, body
-  local _, account = get_account()
+  local account = get_account()
   -- superadmin token gets to see all brokers
   if (account._cid == "/account/1") then
     code, obj, body = HTTP("GET", _API("/v2/broker"))
@@ -555,7 +559,7 @@ end
 function do_task_provision()
   local pki = pki_info()
   local existing_cn = extract_subject()
-  local _, account = get_account()
+  local account = get_account()
   get_brokers() -- sets the cached copies
 
   --
