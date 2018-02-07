@@ -681,7 +681,7 @@ function do_task_provision()
   });
 
   if code ~= 200 then
-    _F("Fatal error attempt to submit CSR...\n" .. (body or "<empty>"))
+    _F("Fatal error attempt to provision broker...\n" .. (body or "<empty>"))
   end
 
   return do_fetch_certificate(myself)
