@@ -113,7 +113,7 @@ function parse_cli()
 end
 
 --
--- Configuration management ----------------------------------------------------
+-- Configuration management
 --
 local configs = { }
 configs['api-url'] = {
@@ -233,7 +233,7 @@ end
 
 
 --
--- Circonus API ----------------------------------------------------------------
+-- Circonus API
 --
 function HTTP(method, url, payload, silent, _pp)
   _pp = _pp or function(o)
@@ -475,7 +475,7 @@ function extract_subject()
 end
 
 --
---- Tasks ----------------------------------------------------------------------
+--- Tasks
 --
 
 function do_fetch_certificate(myself)
@@ -679,7 +679,6 @@ function do_task_provision()
     csr = csr_contents,
     make_public = make_public
   });
-
   if code ~= 200 then
     _F("Fatal error attempt to provision broker...\n" .. (body or "<empty>"))
   end
