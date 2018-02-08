@@ -294,12 +294,14 @@ function HTTP(method, url, payload, silent, _pp)
     return -1
   end
 
-  _D("%s -> %s %s\n", r.a, method, url)
+  _D("%s -> %s %s\n> %s\n", r.a, method, url, payload)
 
   headers.Host = host
   headers.Accept = 'application/json'
   local rv = client:do_request(method, uri, headers, payload, "1.1")
   client:get_response(1024000)
+
+  _D("< %s\n\n", output)
 
   if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     if client.code == 403 then
