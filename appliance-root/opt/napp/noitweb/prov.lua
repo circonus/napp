@@ -576,6 +576,11 @@ function do_task_provision()
       _F("\"%s\" was specified as the cn, but that cn isn't in the list of brokers.\n\n" ..
          "Use 'provtool list' to see brokers.\n" , cn)
     end
+    if existing_cn ~= nil and existing_cn ~= cn then
+      _F("Specified cn (%s) does not match the one found in the csr (%s)\n" ..
+           "Please remove the csr file or change the -cn flag."
+           , cn, existing_cn)
+    end
   end
 
   --
