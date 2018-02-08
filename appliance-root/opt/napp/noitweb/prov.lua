@@ -637,7 +637,7 @@ function do_task_provision()
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
       end
       _P(" -- updating information\n")
-      local update_data = {
+      local code, obj, body = provision_broker(existing_cn, {
         csr = pki.csr.data,
         external_host = set_ext_host,
         external_port = set_ext_port,
@@ -649,8 +649,7 @@ function do_task_provision()
         port = 43191,
         prefer_reverse_connection = prefer_reverse,
         rebuild = false,
-      }
-      local code, obj, body = provision_broker(existing_cn, update_data)
+      })
       _, myself = get_broker(existing_cn)
     end
     do_fetch_certificate(myself)
