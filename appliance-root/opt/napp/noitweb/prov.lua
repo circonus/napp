@@ -638,18 +638,18 @@ function do_task_provision()
       end
       _P(" -- updating information\n")
       local update_data = {
-        port = 43191,
-        rebuild = false,
+        csr = pki.csr.data,
+        external_host = set_ext_host,
+        external_port = set_ext_port,
         ipaddress = ip_address,
-        csr = pki.csr.data
+        latitude = set_lat,
+        longitude = set_long,
+        make_public = make_public,
+        noit_name = set_name,
+        port = 43191,
+        prefer_reverse_connection = prefer_reverse,
+        rebuild = false,
       }
-      if set_name ~= nil then update_data.noit_name = set_name end
-      if set_long ~= nil then update_data.longitude = set_long end
-      if set_lat ~= nil then update_data.latitude = set_lat end
-      if set_ext_host ~= nil then update_data.external_host = set_ext_host end
-      if set_ext_port ~= nil then update_data.external_port = set_ext_port end
-      update_data.prefer_reverse_connection = prefer_reverse
-      update_data.make_public = make_public
       local code, obj, body = provision_broker(existing_cn, update_data)
       _, myself = get_broker(existing_cn)
     end
