@@ -9,7 +9,8 @@ local API_KEY
 local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
-      prefer_reverse, set_ext_host, set_ext_port, make_public
+      prefer_reverse, set_ext_host, set_ext_port, make_public,
+      task_fetch_certs
 
 prog = "provtool"
 prefer_reverse = 0
@@ -51,6 +52,10 @@ function usage()
   _P("# Rebuilding a broker's configuration\n\n")
   _P("  %s rebuild [-cn <cn>]\n", prog)
   _P("\t-cn <cn>\trebuild an arbitrary cn [default: this machine].\n")
+  _P("\n")
+  _P("# Fetch/renew cerfificate\n\n")
+  _P("  %s cert\n", prog)
+  _P("  \t-cn <cn>\tspecify a broker CN\n")
   _P("\n")
 end
 
@@ -100,6 +105,9 @@ function parse_cli()
     opts.public = function(n) make_public = 1 end
   elseif command == 'rebuild' then
     task_rebuild = true
+    opts.cn = function(n) cn = n() end
+  elseif command == 'cert' then
+    task_fetch_certs = true
     opts.cn = function(n) cn = n() end
   else usage() os.exit(2)
   end
@@ -702,10 +710,26 @@ function do_task_rebuild()
   local existing_cn = extract_subject()
   if cn == nil then cn = existing_cn end
   if cn == nil then
-    _F("rebuild requires a cn to be specified (or this broker to be provisioned)\n")
+    _F("rebuild requires a cn to be specified or this broker to be provisioned\n")
   end
   local code, obj, body = provision_broker(cn, { rebuild = true })
   return 2
+end
+
+function do_task_fetch_certs()
+  local existing_cn = extract_subject()
+  if cn == nil then cn = existing_cn end
+  if cn == nil then
+    _F("fetch cert requires a cn to be specified or this broker to be provisioned\n")
+  end
+  if find_broker(cn) == nil then
+    _F("You don't have access to a broker with cn %s\n", cn)
+  end
+  local code, myself = get_broker(cn)
+  if not (code == 200 and myself) then
+    _F("Failed fetching broker information for cn %s.\n", cn)
+  end
+  do_fetch_certificate(myself)
 end
 
 function do_work()
@@ -716,6 +740,7 @@ function do_work()
   if task_list then do_task_list(_P) os.exit(0)
   elseif task_provision then os.exit(do_task_provision())
   elseif task_rebuild then os.exit(do_task_rebuild())
+  elseif task_fetch_certs then os.exit(do_task_fetch_certs())
   end
 
   _F("Something went very wrong.\n")
