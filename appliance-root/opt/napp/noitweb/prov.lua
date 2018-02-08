@@ -20,7 +20,7 @@ CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url
 function _P(...) mtev.log("stdout", ...) end
 function _E(...) mtev.log("error", ...) end
 function _F(...) mtev.log("error", "Fatal Error:\n\n") mtev.log("error", ...) os.exit(2) end
-function _D(...) if debug then mtev.log("debug/cli", ...) end end
+function _D(level, ...) if debug >= level then mtev.log("debug/cli", ...) end end
 function tablelength(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
@@ -57,8 +57,10 @@ end
 --
 -- Cli parser
 --
+debug = 0
 local opts = {
-  d = function(n) debug = true end
+  -- use -d (repeated) for debuging output,
+  d = function(n) debug = debug + 1 end
 }
 
 function nextargs_iter()
@@ -294,14 +296,15 @@ function HTTP(method, url, payload, silent, _pp)
     return -1
   end
 
-  _D("%s -> %s %s\n> %s\n", r.a, method, url, payload)
+  _D(1, "%s -> %s %s\n", r.a, method, url)
+  _D(2, "> %s\n", payload)
 
   headers.Host = host
   headers.Accept = 'application/json'
   local rv = client:do_request(method, uri, headers, payload, "1.1")
   client:get_response(1024000)
 
-  _D("< %s\n\n", output)
+  _D(2, "< %s\n\n", output)
 
   if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     if client.code == 403 then
