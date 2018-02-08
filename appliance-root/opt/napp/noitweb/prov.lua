@@ -623,13 +623,16 @@ function do_task_provision()
     set_name = set_name or myself.noit_name
     ip_address = ip_address or myself.ipaddress
     -- Let's see if our metadata has changed, is so we'll PUT new info
-    if myself.noit_name ~= set_name or
-       myself.ipaddress ~= ip_address or
-       myself.longitude ~= set_long or
-       myself.latitude ~= set_lat or
-       myself.ext_host ~= set_ext_host or
-       myself.ext_port ~= set_ext_port or
-       myself.prefer_reverse_connection ~= prefer_reverse then
+    if myself.noit_name == set_name and
+       myself.ipaddress == ip_address and
+       myself.longitude == set_long and
+       myself.latitude == set_lat and
+       myself.ext_host == set_ext_host and
+       myself.ext_port == set_ext_port and
+       myself.prefer_reverse_connection == prefer_reverse
+    then
+      _P(" -- up to date")
+    else
       if ip_address == nil and (myself.prefer_reverse_connection ~= 1 or prefer_reverse ~= 1) then
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
       end
