@@ -1,3 +1,6 @@
+--
+-- Broker Provisioning Tool
+--
 module("prov", package.seeall)
 
 local HttpClient = require 'mtev.HttpClient'
@@ -18,85 +21,10 @@ function _P(...) mtev.log("stdout", ...) end
 function _E(...) mtev.log("error", ...) end
 function _F(...) mtev.log("error", "Fatal Error:\n\n") mtev.log("error", ...) os.exit(2) end
 function _D(...) if debug then mtev.log("debug/cli", ...) end end
-
-local configs = { }
-configs['api-url'] = {
-  path = CIRCONUS_API_URL_CONF_PATH,
-  description = "the Circonus API base url",
-  validate = function(val)
-    local schema, host, sep, port, uri = string.match(val, "^(https?)://([^:/]*)(:?)([0-9]*)(.*)$")
-    if schema == nil or host == nil or
-       uri == nil or string.sub(uri or "",-1) == "/" then
-      return false, "must be a URL without path like: https://api.circonus.com"
-    end
-    return true
-  end,
-  default = "https://api.circonus.com"
-}
-configs['api-token'] = {
-  path = CIRCONUS_API_TOKEN_CONF_PATH,
-  validate = function(a)
-    if not string.find(a, "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") then
-      return false, "must be a valid uuid"
-    end
-    return true
-  end,
-  description = "the Circonus API token for provisioning"
-}
-configs['googleanalytics/client-id'] = {
-  path = "//circonus/googleanalytics//config/client_id",
-  description = "Google Analytics Client Id"
-}
-configs['googleanalytics/client-secret'] = {
-  path = "//circonus/googleanalytics//config/client_secret",
-  description = "Google Analytics Client Secret"
-}
-configs['googleanalytics/api-key'] = {
-  path = "//circonus/googleanalytics//config/api_key",
-  description = "Google Analytics API Key"
-}
-function extract_json_contents(text)
-  local doc = mtev.parsejson(text)
-  if doc == nil then return nil end
-  local obj = doc:document()
-  if obj == nil then return nil end
-  return obj.contents;
-end
-function do_config_get(key)
-  if key == nil then
-    local a = {}
-    for n in pairs(configs) do table.insert(a, n) end
-    table.sort(a)
-    for _,k in pairs(a) do
-      _P("%s=%s\n", k, mtev.conf_get_string(configs[k].path))
-    end
-  elseif not configs[key] then
-    _F("Unknown config key: %s\n", key)
-  else
-    _P("%s\n", mtev.conf_get_string(configs[key].path))
-  end
-  return 0
-end
-function do_config_set(key, value)
-  if not configs[key] then _F("Unknown config key: %s\n", key) end
-  if configs[key].validate then
-    local passed, msg = configs[key].validate(value)
-    if not passed then
-      _F("Cannot set %s:\n%s\n", key, msg or "unknown error")
-    end
-  end
-  mtev.conf_get_string(configs[key].path, value)
-end
-
-function config_usage()
-  local a = {}
-  for n in pairs(configs) do table.insert(a, n) end
-  table.sort(a)
-  for _,k in pairs(a) do
-    local v = configs[k]
-    _P("\t%s:\t%s\n", k, v.description)
-    if v.default then _P("\t\t\t(default: %s)\n", v.default) end
-  end
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
 end
 
 function usage()
@@ -126,36 +54,12 @@ function usage()
   _P("\n")
 end
 
-function write_contents_if_changed(file, body, mode)
-  if mode == nil then
-     mode = tonumber(0644, 8)
-  end
-  local inp = io.open(file, "rb")
-  if inp ~= nil then
-    local data = inp:read("*all")
-    inp:close();
-    if body == data then return true end
-  end
-  local fd = mtev.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
-  if fd >= 0 then
-    local len, error = mtev.write(fd, body)
-    mtev.close(fd)
-    if len ~= body:len() then return false end
-    return true
-  end
-  return false
-end
-
-function fetch_url_to_file(url, file, mode, transform)
-  local code, body = fetch_url(url)
-  if code ~= 200 then return false, body end
-  if transform ~= nil then body = transform(body) end
-  if body == nil or body:len() == 0 then return false, "blank document" end
-  if not write_contents_if_changed(file, body, mode) then
-    return false
-  end
-  return true
-end
+--
+-- Cli parser
+--
+local opts = {
+  d = function(n) debug = true end
+}
 
 function nextargs_iter()
   local i = 1
@@ -164,10 +68,6 @@ function nextargs_iter()
     return arg[i-1]
   end
 end
-
-local opts = {
-  d = function(n) debug = true end
-}
 
 function parse_cli()
   local next = nextargs_iter(arg)
@@ -212,61 +112,129 @@ function parse_cli()
   end
 end
 
-function table2string(t, prefix)
-  local output = ''
-  if prefix == nil then prefix = '' end
-  for k,v in pairs(t) do
-    if type(v) == 'table' then
-      output = output .. prefix .. k .. " :\n" .. table2string(v, prefix.."  ")
-    else
-      output = output .. prefix .. k .. " : " .. tostring(v) .. "\n"
+--
+-- Configuration management ----------------------------------------------------
+--
+local configs = { }
+configs['api-url'] = {
+  path = CIRCONUS_API_URL_CONF_PATH,
+  description = "the Circonus API base url",
+  validate = function(val)
+    local schema, host, sep, port, uri = string.match(val, "^(https?)://([^:/]*)(:?)([0-9]*)(.*)$")
+    if schema == nil or host == nil or
+       uri == nil or string.sub(uri or "",-1) == "/" then
+      return false, "must be a URL without path like: https://api.circonus.com"
     end
-  end
-  return output
+    return true
+  end,
+  default = "https://api.circonus.com"
+}
+configs['api-token'] = {
+  path = CIRCONUS_API_TOKEN_CONF_PATH,
+  validate = function(a)
+    if not string.find(a, "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") then
+      return false, "must be a valid uuid"
+    end
+    return true
+  end,
+  description = "the Circonus API token for provisioning"
+}
+configs['googleanalytics/client-id'] = {
+  path = "//circonus/googleanalytics//config/client_id",
+  description = "Google Analytics Client Id"
+}
+configs['googleanalytics/client-secret'] = {
+  path = "//circonus/googleanalytics//config/client_secret",
+  description = "Google Analytics Client Secret"
+}
+configs['googleanalytics/api-key'] = {
+  path = "//circonus/googleanalytics//config/api_key",
+  description = "Google Analytics API Key"
+}
+
+function extract_json_contents(text)
+  local doc = mtev.parsejson(text)
+  if doc == nil then return nil end
+  local obj = doc:document()
+  if obj == nil then return nil end
+  return obj.contents;
 end
 
-function tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
+function do_config_get(key)
+  if key == nil then
+    local a = {}
+    for n in pairs(configs) do table.insert(a, n) end
+    table.sort(a)
+    for _,k in pairs(a) do
+      _P("%s=%s\n", k, mtev.conf_get_string(configs[k].path))
+    end
+  elseif not configs[key] then
+    _F("Unknown config key: %s\n", key)
+  else
+    _P("%s\n", mtev.conf_get_string(configs[key].path))
+  end
+  return 0
+end
+
+function do_config_set(key, value)
+  if not configs[key] then _F("Unknown config key: %s\n", key) end
+  if configs[key].validate then
+    local passed, msg = configs[key].validate(value)
+    if not passed then
+      _F("Cannot set %s:\n%s\n", key, msg or "unknown error")
+    end
+  end
+  mtev.conf_get_string(configs[key].path, value)
+end
+
+function config_usage()
+  local a = {}
+  for n in pairs(configs) do table.insert(a, n) end
+  table.sort(a)
+  for _,k in pairs(a) do
+    local v = configs[k]
+    _P("\t%s:\t%s\n", k, v.description)
+    if v.default then _P("\t\t\t(default: %s)\n", v.default) end
+  end
+end
+
+function write_contents_if_changed(file, body, mode)
+  if mode == nil then
+     mode = tonumber(0644, 8)
+  end
+  local inp = io.open(file, "rb")
+  if inp ~= nil then
+    local data = inp:read("*all")
+    inp:close();
+    if body == data then return true end
+  end
+  local fd = mtev.open(file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), mode)
+  if fd >= 0 then
+    local len, error = mtev.write(fd, body)
+    mtev.close(fd)
+    if len ~= body:len() then return false end
+    return true
+  end
+  return false
 end
 
 function circonus_api_token()
   return mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
 end
+
 function circonus_api_url()
   return mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH)
-      or "https://api.circonus.com"
+    or "https://api.circonus.com"
 end
+
 function _API(endpoint)
   return circonus_api_url() .. endpoint
 end
 
-function pki_info()
-  local keyfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
-  local csrfile = keyfile:gsub("%.key$", ".csr")
-  local certfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
-  local crl = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
-  local ca_chain = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
 
-  local details = {}
-  local needs = false
-
-  -- key but no contents
-  details.key = { file=keyfile, exists=not not mtev.stat(keyfile) }
-
-  -- all the other bits have the whole file slurped
-  details.crl = { file=crl, exists=not not mtev.stat(crl) }
-  details.crl.data = slurp_file(details.crl.file)
-  details.csr = { file=csrfile, exists=not not mtev.stat(csrfile) }
-  details.csr.data = slurp_file(details.csr.file)
-  details.cert = { file=certfile, exists=not not mtev.stat(certfile) }
-  details.cert.data = slurp_file(details.cert.file)
-  details.ca = { file=ca_chain, exists=not not mtev.stat(ca_chain) }
-  details.ca.data = slurp_file(details.ca.file)
-  return details
-end
-
+--
+-- Circonus API ----------------------------------------------------------------
+--
 function HTTP(method, url, payload, silent, _pp)
   _pp = _pp or function(o)
     local doc = mtev.parsejson(o)
@@ -352,17 +320,16 @@ function HTTP(method, url, payload, silent, _pp)
   return client.code, _pp(output), output
 end
 
-function fetch_url(url)
-  return HTTP("GET", url, nil, true, function(o) return o end)
-end
 function get_ip()
   local code, obj = HTTP("GET", _API("/v2/canhazip"), nil, true)
   if obj ~= nil then return code, obj.ipv4 end
   return code, nil
 end
+
 function get_account()
   return HTTP("GET", _API("/v2/account/current"))
 end
+
 function get_brokers(type)
   local code, obj, body
   local _, account = get_account()
@@ -376,12 +343,77 @@ function get_brokers(type)
   brokers = obj
   return code, obj, body
 end
+
+function find_broker(cn)
+  if brokers == nil then get_brokers() end
+  for _,group in pairs(brokers) do
+    for _,broker in pairs(group._details) do
+      if broker.cn == cn then return broker end
+    end
+  end
+  return nil
+end
+
 function get_broker(cn)
   return HTTP("GET", _API("/v2/provision_broker/" .. mtev.extras.url_encode(cn)))
 end
+
 function provision_broker(cn, data)
   local payload = mtev.tojson(data):tostring()
   return HTTP("PUT", _API("/v2/provision_broker/" .. mtev.extras.url_encode(cn)), payload)
+end
+
+function fetch_url(url)
+  return HTTP("GET", url, nil, true, function(o) return o end)
+end
+
+function fetch_url_to_file(url, file, mode, transform)
+  local code, body = fetch_url(url)
+  if code ~= 200 then return false, body end
+  if transform ~= nil then body = transform(body) end
+  if body == nil or body:len() == 0 then return false, "blank document" end
+  if not write_contents_if_changed(file, body, mode) then
+    return false
+  end
+  return true
+end
+
+--
+-- PKI Manangment
+--
+function slurp_file(file)
+  if file == nil then return nil end
+  local inp = io.open(file, "rb")
+  if inp == nil then return nil, nil end
+  local data = inp:read("*all")
+  inp:close()
+  if data == nil then return nil, nil end
+  return data
+end
+
+function pki_info()
+  local keyfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/key_file')
+  local csrfile = keyfile:gsub("%.key$", ".csr")
+  local certfile = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/certificate_file')
+  local crl = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/crl')
+  local ca_chain = mtev.conf('//listeners//listener[@type="control_dispatch"]/ancestor-or-self::node()/sslconfig/ca_chain')
+
+  local details = {}
+  local needs = false
+
+  -- key but no contents
+  details.key = { file=keyfile, exists=not not mtev.stat(keyfile) }
+
+  -- all the other bits have the whole file slurped
+  details.crl = { file=crl, exists=not not mtev.stat(crl) }
+  details.crl.data = slurp_file(details.crl.file)
+  details.csr = { file=csrfile, exists=not not mtev.stat(csrfile) }
+  details.csr.data = slurp_file(details.csr.file)
+  details.cert = { file=certfile, exists=not not mtev.stat(certfile) }
+  details.cert.data = slurp_file(details.cert.file)
+  details.ca = { file=ca_chain, exists=not not mtev.stat(ca_chain) }
+  details.ca.data = slurp_file(details.ca.file)
+  return details
 end
 
 function generate_key(keyfile)
@@ -429,16 +461,6 @@ function generate_csr(cn,c,st,o)
   return 0
 end
 
-function slurp_file(file)
-  if file == nil then return nil end
-  local inp = io.open(file, "rb")
-  if inp == nil then return nil, nil end
-  local data = inp:read("*all")
-  inp:close()
-  if data == nil then return nil, nil end
-  return data
-end
-
 function extract_subject()
   local pki = pki_info()
   if pki.csr.data == nil then return nil end
@@ -448,46 +470,9 @@ function extract_subject()
   return cn, pki.csr.data
 end
 
-function find_broker(cn)
-  if brokers == nil then get_brokers() end
-  for _,group in pairs(brokers) do
-    for _,broker in pairs(group._details) do
-      if broker.cn == cn then return broker end
-    end
-  end
-  return nil
-end
-
-function do_task_list(_print)
-  local avail
-  local count = 0
-  local code, obj = get_brokers()
-  local existing_cn = extract_subject()
-  if _print == nil then _print = function() return end end
-  local fmt = "| %-40s | %-31s |\n"
-  _print(fmt, "Group -> CN", "Status")
-  _print("------------------------------------------------------------------------------\n")
-  for _,group in pairs(obj) do
-    local use_group = tablelength(group._details) > 1
-    for _,broker in pairs(group._details) do
-      if use_group then _print(fmt, group._name, "") end
-      if avail == nil and broker.status == 'unprovisioned' then
-        avail = broker.cn
-      end
-      local mine_str = ""
-      if existing_cn ~= nil and existing_cn == broker.cn then
-        mine_str = " <- current node"
-      end
-      _print(fmt, "  -> " .. broker.cn, broker.status .. mine_str)
-      count = count + 1
-    end
-    _print("------------------------------------------------------------------------------\n")
-  end
-  if count < 1 then
-    _print("No brokers found\n")
-  end
-  return avail
-end
+--
+--- Tasks ----------------------------------------------------------------------
+--
 
 function do_fetch_certificate(myself)
   local cn = myself._cid
@@ -536,6 +521,37 @@ function do_fetch_certificate(myself)
   _P(" - ok\n")
 end
 
+function do_task_list(_print)
+  local avail
+  local count = 0
+  local code, obj = get_brokers()
+  local existing_cn = extract_subject()
+  if _print == nil then _print = function() return end end
+  local fmt = "| %-40s | %-31s |\n"
+  _print(fmt, "Group -> CN", "Status")
+  _print("------------------------------------------------------------------------------\n")
+  for _,group in pairs(obj) do
+    local use_group = tablelength(group._details) > 1
+    for _,broker in pairs(group._details) do
+      if use_group then _print(fmt, group._name, "") end
+      if avail == nil and broker.status == 'unprovisioned' then
+        avail = broker.cn
+      end
+      local mine_str = ""
+      if existing_cn ~= nil and existing_cn == broker.cn then
+        mine_str = " <- current node"
+      end
+      _print(fmt, "  -> " .. broker.cn, broker.status .. mine_str)
+      count = count + 1
+    end
+    _print("------------------------------------------------------------------------------\n")
+  end
+  if count < 1 then
+    _print("No brokers found\n")
+  end
+  return avail
+end
+
 function do_task_provision()
   local pki = pki_info()
   local existing_cn = extract_subject()
@@ -546,7 +562,6 @@ function do_task_provision()
   -- If a cn was specified on the command line and it
   -- isn't in the list of broker cns, we can stop now.
   --
-
   if cn ~= nil then
     if find_broker(cn) == nil then
       _F("\"%s\" was specified as the cn, but that cn isn't in the list of brokers.\n\n" ..
@@ -566,7 +581,7 @@ function do_task_provision()
   --
   -- Next it gets more complicated.  This might not be our first rodeo.
   -- Perhaps we've been provisioned already or we started the process and
-  -- failed to finish it... that is detected here.A
+  -- failed to finish it... that is detected here.
   --
   local myself
   if existing_cn ~= nil then
@@ -668,15 +683,6 @@ function do_task_provision()
   return do_fetch_certificate(myself)
 end
 
-function main()
-  parse_cli()
-  API_TOKEN = circonus_api_token()
-  if API_TOKEN == nil then
-    _F("Missing CIRCONUS_API_TOKEN!\nPlease set it via:\n\n%s config set api-token <uuid>\n", prog)
-  end
-  os.exit(do_work())
-end
-
 function do_task_rebuild()
   local existing_cn = extract_subject()
   if cn == nil then cn = existing_cn end
@@ -699,4 +705,13 @@ function do_work()
 
   _F("Something went very wrong.\n")
   return 2
+end
+
+function main()
+  parse_cli()
+  API_TOKEN = circonus_api_token()
+  if API_TOKEN == nil then
+    _F("Missing CIRCONUS_API_TOKEN!\nPlease set it via:\n\n%s config set api-token <uuid>\n", prog)
+  end
+  os.exit(do_work())
 end

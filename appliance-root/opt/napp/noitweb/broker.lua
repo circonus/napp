@@ -3,7 +3,7 @@ module(..., package.seeall)
 local sessions = {}
 local cached_agent_info = {}
 
-local HttpClient = require('mtev.HttpClient') 
+local HttpClient = require('mtev.HttpClient')
 local json = require('json')
 local noit = require('noit')
 local mtev = require('mtev')
@@ -284,7 +284,7 @@ function refresh_cert()
         local pki_info = pki_info()
         local info = mtev.parsejson(body):document()
         if info ~= nil and info.cert ~= nil and info.cert:len() > 0 then
-          local success, changed = 
+          local success, changed =
             write_contents_if_changed(pki_info.cert.file, info.cert)
           if not success then mtev.log("error", "Error: failed to write %s\n", pki_info.cert.file)
           elseif changed then mtev.log("error", "updated %s\n", pki_info.cert.file)
@@ -301,7 +301,7 @@ function refresh_cert()
       end
       local info = pki_info()
       if info.cert.exists then
-        break 
+        break
       end
       mtev.log("error", "Circonus certificate non-existent, polling(5)\n")
     end
@@ -369,7 +369,7 @@ function update_reverse_sockets(info)
       mtev.log("error", "Turning up reverse connection: '%s'\n", id)
       mtev.reverse_start(details.host,details.port,
                          sslconfig,
-                         { cn = details.cn, 
+                         { cn = details.cn,
                            endpoint = subject,
                            xbind = "*"
                          })
