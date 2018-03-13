@@ -10,7 +10,7 @@ local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
       prefer_reverse, set_ext_host, set_ext_port, make_public,
-      task_fetch_certs
+      task_fetch_certs, cluster_id
 
 prog = "provtool"
 prefer_reverse = 0
@@ -48,6 +48,7 @@ function usage()
   _P("\t-ext_host <name>\tpublic facing name for broker\n")
   _P("\t-ext_port <port>\tpublic facing port for broker\n")
   _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
+  _P("\t-cluster_id\t\ttell Add this broker to an exsiting cluster_id\n")
   _P("\n")
   _P("# Rebuilding a broker's configuration\n\n")
   _P("  %s rebuild [-cn <cn>]\n", prog)
@@ -103,6 +104,7 @@ function parse_cli()
     opts.ext_host = function(n) set_ext_host = n() end
     opts.ext_port = function(n) set_ext_port = n() end
     opts.public = function(n) make_public = 1 end
+    opts.cluster_id = function(n) cluster_id = n() end
   elseif command == 'rebuild' then
     task_rebuild = true
     opts.cn = function(n) cn = n() end
@@ -630,6 +632,7 @@ function do_task_provision()
     --
     set_name = set_name or myself.noit_name
     ip_address = ip_address or myself.ipaddress
+    cluster_id = cluster_id or myself.cluster_id
     -- Let's see if our metadata has changed, is so we'll PUT new info
     if myself.noit_name == set_name and
        myself.ipaddress == ip_address and
@@ -637,7 +640,8 @@ function do_task_provision()
        myself.latitude == set_lat and
        myself.ext_host == set_ext_host and
        myself.ext_port == set_ext_port and
-       myself.prefer_reverse_connection == prefer_reverse
+       myself.prefer_reverse_connection == prefer_reverse and
+       myself.cluster_id == cluster_id
     then
       _P(" -- up to date")
     else
@@ -657,6 +661,7 @@ function do_task_provision()
         port = 43191,
         prefer_reverse_connection = prefer_reverse,
         rebuild = false,
+        cluster_id = cluster_id,
       })
       _, myself = get_broker(existing_cn)
     end
@@ -697,7 +702,8 @@ function do_task_provision()
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
     csr = csr_contents,
-    make_public = make_public
+    make_public = make_public,
+    cluster_id = cluster_id,
   });
   if code ~= 200 then
     _F("Fatal error attempt to provision broker...\n" .. (body or "<empty>"))
