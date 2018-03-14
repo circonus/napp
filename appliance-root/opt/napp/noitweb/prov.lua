@@ -9,7 +9,8 @@ local API_KEY
 local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
-      prefer_reverse, set_ext_host, set_ext_port, make_public
+      prefer_reverse, set_ext_host, set_ext_port, make_public,
+      task_fetch_certs, cluster_id
 
 prog = "provtool"
 prefer_reverse = 0
@@ -20,7 +21,7 @@ CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url
 function _P(...) mtev.log("stdout", ...) end
 function _E(...) mtev.log("error", ...) end
 function _F(...) mtev.log("error", "Fatal Error:\n\n") mtev.log("error", ...) os.exit(2) end
-function _D(...) if debug then mtev.log("debug/cli", ...) end end
+function _D(level, ...) if debug >= level then mtev.log("debug/cli", ...) end end
 function tablelength(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
@@ -47,18 +48,25 @@ function usage()
   _P("\t-ext_host <name>\tpublic facing name for broker\n")
   _P("\t-ext_port <port>\tpublic facing port for broker\n")
   _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
+  _P("\t-cluster_id\t\ttell Add this broker to an exsiting cluster_id\n")
   _P("\n")
   _P("# Rebuilding a broker's configuration\n\n")
   _P("  %s rebuild [-cn <cn>]\n", prog)
   _P("\t-cn <cn>\trebuild an arbitrary cn [default: this machine].\n")
+  _P("\n")
+  _P("# Fetch/renew cerfificate\n\n")
+  _P("  %s cert\n", prog)
+  _P("  \t-cn <cn>\tspecify a broker CN\n")
   _P("\n")
 end
 
 --
 -- Cli parser
 --
+debug = 0
 local opts = {
-  d = function(n) debug = true end
+  -- use -d (repeated) for debuging output,
+  d = function(n) debug = debug + 1 end
 }
 
 function nextargs_iter()
@@ -96,8 +104,12 @@ function parse_cli()
     opts.ext_host = function(n) set_ext_host = n() end
     opts.ext_port = function(n) set_ext_port = n() end
     opts.public = function(n) make_public = 1 end
+    opts.cluster_id = function(n) cluster_id = n() end
   elseif command == 'rebuild' then
     task_rebuild = true
+    opts.cn = function(n) cn = n() end
+  elseif command == 'cert' then
+    task_fetch_certs = true
     opts.cn = function(n) cn = n() end
   else usage() os.exit(2)
   end
@@ -113,7 +125,7 @@ function parse_cli()
 end
 
 --
--- Configuration management ----------------------------------------------------
+-- Configuration management
 --
 local configs = { }
 configs['api-url'] = {
@@ -233,7 +245,7 @@ end
 
 
 --
--- Circonus API ----------------------------------------------------------------
+-- Circonus API
 --
 function HTTP(method, url, payload, silent, _pp)
   _pp = _pp or function(o)
@@ -294,12 +306,15 @@ function HTTP(method, url, payload, silent, _pp)
     return -1
   end
 
-  _D("%s -> %s %s\n", r.a, method, url)
+  _D(1, "%s -> %s %s\n", r.a, method, url)
+  _D(2, "> %s\n", payload)
 
   headers.Host = host
   headers.Accept = 'application/json'
   local rv = client:do_request(method, uri, headers, payload, "1.1")
   client:get_response(1024000)
+
+  _D(2, "< %s\n\n", output)
 
   if string.sub(url, 1, string.len(circonus_api_url())) == circonus_api_url() then
     if client.code == 403 then
@@ -327,12 +342,16 @@ function get_ip()
 end
 
 function get_account()
-  return HTTP("GET", _API("/v2/account/current"))
+  local code, obj = HTTP("GET", _API("/v2/account/current"))
+  if not obj then
+    _F("Could not retrieve account information. Is api-url set correctly?\n")
+  end
+  return obj
 end
 
 function get_brokers(type)
   local code, obj, body
-  local _, account = get_account()
+  local account = get_account()
   -- superadmin token gets to see all brokers
   if (account._cid == "/account/1") then
     code, obj, body = HTTP("GET", _API("/v2/broker"))
@@ -471,7 +490,7 @@ function extract_subject()
 end
 
 --
---- Tasks ----------------------------------------------------------------------
+--- Tasks
 --
 
 function do_fetch_certificate(myself)
@@ -555,7 +574,7 @@ end
 function do_task_provision()
   local pki = pki_info()
   local existing_cn = extract_subject()
-  local _, account = get_account()
+  local account = get_account()
   get_brokers() -- sets the cached copies
 
   --
@@ -566,6 +585,11 @@ function do_task_provision()
     if find_broker(cn) == nil then
       _F("\"%s\" was specified as the cn, but that cn isn't in the list of brokers.\n\n" ..
          "Use 'provtool list' to see brokers.\n" , cn)
+    end
+    if existing_cn ~= nil and existing_cn ~= cn then
+      _F("Specified cn (%s) does not match the one found in the csr (%s)\n" ..
+           "Please remove the csr file or change the -cn flag."
+           , cn, existing_cn)
     end
   end
 
@@ -608,32 +632,37 @@ function do_task_provision()
     --
     set_name = set_name or myself.noit_name
     ip_address = ip_address or myself.ipaddress
+    cluster_id = cluster_id or myself.cluster_id
     -- Let's see if our metadata has changed, is so we'll PUT new info
-    if myself.noit_name ~= set_name or
-       myself.ipaddress ~= ip_address or
-       myself.longitude ~= set_long or
-       myself.latitude ~= set_lat or
-       myself.ext_host ~= set_ext_host or
-       myself.ext_port ~= set_ext_port or
-       myself.prefer_reverse_connection ~= prefer_reverse then
+    if myself.noit_name == set_name and
+       myself.ipaddress == ip_address and
+       myself.longitude == set_long and
+       myself.latitude == set_lat and
+       myself.ext_host == set_ext_host and
+       myself.ext_port == set_ext_port and
+       myself.prefer_reverse_connection == prefer_reverse and
+       myself.cluster_id == cluster_id
+    then
+      _P(" -- up to date")
+    else
       if ip_address == nil and (myself.prefer_reverse_connection ~= 1 or prefer_reverse ~= 1) then
         _F("We could not detemine your public IP address, please use -ip <ip>\n")
       end
       _P(" -- updating information\n")
-      local update_data = {
-        port = 43191,
-        rebuild = false,
+      local code, obj, body = provision_broker(existing_cn, {
+        csr = pki.csr.data,
+        external_host = set_ext_host,
+        external_port = set_ext_port,
         ipaddress = ip_address,
-        csr = pki.csr.data
-      }
-      if set_name ~= nil then update_data.noit_name = set_name end
-      if set_long ~= nil then update_data.longitude = set_long end
-      if set_lat ~= nil then update_data.latitude = set_lat end
-      if set_ext_host ~= nil then update_data.ext_host = set_ext_host end
-      if set_ext_port ~= nil then update_data.ext_port = set_ext_port end
-      update_data.prefer_reverse_connection = prefer_reverse
-      update_data.make_public = make_public
-      local code, obj, body = provision_broker(existing_cn, update_data)
+        latitude = set_lat,
+        longitude = set_long,
+        make_public = make_public,
+        noit_name = set_name,
+        port = 43191,
+        prefer_reverse_connection = prefer_reverse,
+        rebuild = false,
+        cluster_id = cluster_id,
+      })
       _, myself = get_broker(existing_cn)
     end
     do_fetch_certificate(myself)
@@ -673,11 +702,11 @@ function do_task_provision()
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
     csr = csr_contents,
-    make_public = make_public
+    make_public = make_public,
+    cluster_id = cluster_id,
   });
-
   if code ~= 200 then
-    _F("Fatal error attempt to submit CSR...\n" .. (body or "<empty>"))
+    _F("Fatal error attempt to provision broker...\n" .. (body or "<empty>"))
   end
 
   return do_fetch_certificate(myself)
@@ -687,10 +716,26 @@ function do_task_rebuild()
   local existing_cn = extract_subject()
   if cn == nil then cn = existing_cn end
   if cn == nil then
-    _F("rebuild requires a cn to be specified (or this broker to be provisioned)\n")
+    _F("rebuild requires a cn to be specified or this broker to be provisioned\n")
   end
   local code, obj, body = provision_broker(cn, { rebuild = true })
   return 2
+end
+
+function do_task_fetch_certs()
+  local existing_cn = extract_subject()
+  if cn == nil then cn = existing_cn end
+  if cn == nil then
+    _F("fetch cert requires a cn to be specified or this broker to be provisioned\n")
+  end
+  if find_broker(cn) == nil then
+    _F("You don't have access to a broker with cn %s\n", cn)
+  end
+  local code, myself = get_broker(cn)
+  if not (code == 200 and myself) then
+    _F("Failed fetching broker information for cn %s.\n", cn)
+  end
+  do_fetch_certificate(myself)
 end
 
 function do_work()
@@ -701,6 +746,7 @@ function do_work()
   if task_list then do_task_list(_P) os.exit(0)
   elseif task_provision then os.exit(do_task_provision())
   elseif task_rebuild then os.exit(do_task_rebuild())
+  elseif task_fetch_certs then os.exit(do_task_fetch_certs())
   end
 
   _F("Something went very wrong.\n")
