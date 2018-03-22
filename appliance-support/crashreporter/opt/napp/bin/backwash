@@ -1,5 +1,6 @@
 #!/bin/bash
 PID=$1
+REASON=$2
 
 if [ -r /opt/noit/prod/etc/noit.env ]; then
 	. /opt/noit/prod/etc/noit.env
@@ -22,7 +23,7 @@ if [ -r /opt/napp/etc/ssl/appliance.crt ]; then
 fi
 
 /opt/backtrace/bin/ptrace --print --config=/opt/noit/prod/etc/ptrace.conf \
-	--kv=hostcn:$HOSTCN,location:$LOCATION,provider:$PROVIDER,environment:$ENVIRONMENT,trace_reason:$3 \
+	--kv=hostcn:$HOSTCN,location:$LOCATION,provider:$PROVIDER,environment:$ENVIRONMENT,trace_reason:$REASON \
 	--kv=branch:$NOIT_BRANCH,version:$NOIT_VERSION,version_tstamp:$NOIT_VERSION_TSTAMP,buildmachine:$BUILD_NOIT_UNAME_N \
 	$PID
 
