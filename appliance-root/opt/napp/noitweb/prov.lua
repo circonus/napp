@@ -720,7 +720,10 @@ function do_task_rebuild()
     _F("rebuild requires a cn to be specified or this broker to be provisioned\n")
   end
   local code, obj, body = provision_broker(cn, { rebuild = true })
-  return 2
+  if code ~= 200 then
+    _F("Fatal error attempting to rebuild: %s\n", body)
+  end
+  return 0
 end
 
 function do_task_fetch_certs()
