@@ -224,10 +224,10 @@ function write_contents_if_changed(file, body, mode)
   if fd >= 0 then
     local len, error = mtev.write(fd, body)
     mtev.close(fd)
-    if len ~= body:len() then return false end
+    if len ~= body:len() then return false, "bad resulting file length" end
     return true
   end
-  return false
+  return false, "failed to open target file"
 end
 
 function circonus_api_token()
@@ -391,8 +391,9 @@ function fetch_url_to_file(url, file, mode, transform)
   if code ~= 200 then return false, body end
   if transform ~= nil then body = transform(body) end
   if body == nil or body:len() == 0 then return false, "blank document" end
-  if not write_contents_if_changed(file, body, mode) then
-    return false
+  local rv, error = write_contents_if_changed(file, body, mode)
+  if not rv then
+    return false, error
   end
   return true
 end
