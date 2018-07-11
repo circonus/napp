@@ -44,6 +44,10 @@ function fetch_url(url)
     port = aport
   end
   if not noit.valid_ip(target) then
+    local ltarget = noit.hosts_cache_lookup and noit.hosts_cache_lookup(target)
+    if ltarget ~= nil then target = ltarget end
+  end
+  if not noit.valid_ip(target) then
     local dns = mtev.dns()
     local r = dns:lookup(target)
     if r == nil or r.a == nil then return false, nil, "could not resolve host" end
@@ -338,6 +342,10 @@ function update_reverse_sockets(info)
   end
   for i, key in pairs(info._stratcons) do
     -- resolve the host, if needed
+    if not noit.valid_ip(key.host) then
+      local ltarget = noit.hosts_cache_lookup and noit.hosts_cache_lookup(key.host)
+      if ltarget ~= nil then key.host = ltarget end
+    end
     if not noit.valid_ip(key.host) then
       local dns = mtev.dns()
       local r = dns:lookup(key.host)
