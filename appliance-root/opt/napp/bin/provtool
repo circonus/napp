@@ -11,6 +11,9 @@ HWLOC_HIDE_ERRORS=1
 export HWLOC_HIDE_ERRORS
 
 set -o allexport
+
+chown -R $USER:$GROUP /opt/noit/prod/etc
+
 if [ -r /opt/noit/prod/etc/noit.env ]; then
 	. /opt/noit/prod/etc/noit.env
 fi
