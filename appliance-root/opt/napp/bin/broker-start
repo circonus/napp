@@ -81,5 +81,8 @@ if [ -n "`grep '^    <circonus>' $CONF`" ]; then
 	sed -ie 's#^    <circonus>#    <circonus backingstore="/opt/noit/prod/etc/filtersets">#;' $CONF
 fi
 
+test ! -f /opt/napp/etc/ssl/graphite.key
+export SNI_GRAPHITE=$?
+
 exec $NOITD -c $CONF -u $USER -g $GROUP $*
 exit 2
