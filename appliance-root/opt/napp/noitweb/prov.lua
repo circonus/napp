@@ -10,7 +10,7 @@ local task_provision, task_rebuild, task_list, cn, ip_address,
       CIRCONUS_API_TOKEN_CONF_PATH, CIRCONUS_API_URL_CONF_PATH,
       prog, debug, brokers, set_name, set_long, set_lat, CAcn,
       prefer_reverse, set_ext_host, set_ext_port, make_public,
-      task_fetch_certs, cluster_id
+      task_fetch_certs, set_cluster_ip, cluster_id
 
 prog = "provtool"
 prefer_reverse = 0
@@ -47,6 +47,7 @@ function usage()
   _P("\t-name <name>\tan optional name for the broker\n")
   _P("\t-ext_host <name>\tpublic facing name for broker\n")
   _P("\t-ext_port <port>\tpublic facing port for broker\n")
+  _P("\t-cluster_ip <IP>\tcluster facing IP for broker\n")
   _P("\t-nat\t\ttell Circonus that this broker will dial in\n")
   _P("\t-cluster_id\t\ttell Add this broker to an exsiting cluster_id\n")
   _P("\n")
@@ -103,6 +104,7 @@ function parse_cli()
     opts.lat = function(n) set_lat = n() end
     opts.ext_host = function(n) set_ext_host = n() end
     opts.ext_port = function(n) set_ext_port = n() end
+    opts.cluster_ip = function(n) set_cluster_ip = n() end
     opts.public = function(n) make_public = 1 end
     opts.cluster_id = function(n) cluster_id = n() end
   elseif command == 'rebuild' then
@@ -547,19 +549,22 @@ function do_task_list(_print)
   local code, obj = get_brokers()
   local existing_cn = extract_subject()
   if _print == nil then _print = function() return end end
-  local fmt = "| %-40s | %-31s |\n"
+  local fmt = "| %-50s | %-21s |\n"
   _print(fmt, "Group -> CN", "Status")
   _print("------------------------------------------------------------------------------\n")
   for _,group in pairs(obj) do
-    local use_group = tablelength(group._details) > 1
+    local once = true
     for _,broker in pairs(group._details) do
-      if use_group then _print(fmt, group._name, "") end
+      if once then
+        _print(fmt, group._name, string.sub(group._cid, 9))
+        once = false
+      end
       if avail == nil and broker.status == 'unprovisioned' then
         avail = broker.cn
       end
       local mine_str = ""
       if existing_cn ~= nil and existing_cn == broker.cn then
-        mine_str = " <- current node"
+        mine_str = " <- me"
       end
       _print(fmt, "  -> " .. broker.cn, broker.status .. mine_str)
       count = count + 1
@@ -641,6 +646,7 @@ function do_task_provision()
        myself.latitude == set_lat and
        myself.ext_host == set_ext_host and
        myself.ext_port == set_ext_port and
+       myself.cluster_ip == set_cluster_ip and
        myself.prefer_reverse_connection == prefer_reverse and
        myself.cluster_id == cluster_id
     then
@@ -654,6 +660,7 @@ function do_task_provision()
         csr = pki.csr.data,
         external_host = set_ext_host,
         external_port = set_ext_port,
+        cluster_ip = set_cluster_ip,
         ipaddress = ip_address,
         latitude = set_lat,
         longitude = set_long,
@@ -699,6 +706,7 @@ function do_task_provision()
     longitude = set_long,
     external_host = set_ext_host,
     external_port = set_ext_port,
+    cluster_ip = set_cluster_ip,
     rebuild = false,
     ipaddress = ip_address,
     prefer_reverse_connection = prefer_reverse,
