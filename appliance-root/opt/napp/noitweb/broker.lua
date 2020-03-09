@@ -392,8 +392,9 @@ function reverse_socket_maintain()
     local subj = get_subject()
     if subj == nil then
       mtev.log("debug", "No subject set (yet)\n")
+      mtev.sleep(5)
     else
-      local code, body = get_cached_agent_info(subj)
+      local code, body = get_agent_info(subj)
       if code == 200 then
         local info = mtev.parsejson(body):document()
         if info ~= nil then
@@ -401,8 +402,8 @@ function reverse_socket_maintain()
           break
         end
       end
+      mtev.sleep(60)
     end
-    mtev.sleep(5)
   end
 end
 
