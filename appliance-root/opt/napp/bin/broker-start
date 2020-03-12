@@ -48,14 +48,16 @@ if [ -z "`grep circonus-credentials.conf $CONF`" ]; then
 	rm -f $CONF.bak
 fi
 
-# move credentials around change d2b17c3
-O_USER=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/username' 2>/dev/null | grep '^0:' | cut -c4-`
-O_PASS=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/password' 2>/dev/null | grep '^0:' | cut -c4-`
-O_INSIDE=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/inside' 2>/dev/null | grep '^0:' | cut -c4-`
-O_URL=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/circonus_url' 2>/dev/null | grep '^0:' | cut -c4-`
-if [ -n "$O_USER$O_PASS$O_INSIDE$O_URL" ]; then
-	echo "Copying credentials from noit.conf to circonus-credentials.conf"
-	cat << END_OF_CONF > /opt/noit/prod/etc/circonus-credentials.conf
+if $AWK 'BEGIN{C=0} /<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){C++;}} END{exit(C==0);}' $CONF ; then
+        echo "Relocating existing credentials"
+	# move credentials around change d2b17c3
+	O_USER=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/username' 2>/dev/null | grep '^0:' | cut -c4-`
+	O_PASS=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/password' 2>/dev/null | grep '^0:' | cut -c4-`
+	O_INSIDE=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/inside' 2>/dev/null | grep '^0:' | cut -c4-`
+	O_URL=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/circonus_url' 2>/dev/null | grep '^0:' | cut -c4-`
+	if [ -n "$O_USER$O_PASS$O_INSIDE$O_URL" ]; then
+		echo "Copying credentials from noit.conf to circonus-credentials.conf"
+		cat << END_OF_CONF > /opt/noit/prod/etc/circonus-credentials.conf
 <?xml version="1.0" encoding="utf8"?>
 <credentials>
 $O_USER
@@ -64,11 +66,12 @@ $O_INSIDE
 $O_URL
 </credentials>
 END_OF_CONF
-	echo "Removing credentials from noit.conf"
-	rm -f $CONF.bak
-	cp $CONF $CONF.bak
-	$AWK '/<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){next;}} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
-	rm -f $CONF.bak
+		echo "Removing credentials from noit.conf"
+		rm -f $CONF.bak
+		cp $CONF $CONF.bak
+		$AWK '/<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){next;}} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
+		rm -f $CONF.bak
+	fi
 fi
 
 # shatter checks and filtersets 91477334
