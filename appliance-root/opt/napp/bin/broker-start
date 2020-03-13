@@ -30,57 +30,6 @@ for dir in $WRITE_PATHS; do
 	/bin/chown -R $USER:$GROUP $dir 2>/dev/null
 done
 
-# Update bits
-
-# upgrade for conf change 4f43782
-HAS_LOADER=`grep '<loader image="lua" name="lua">' $CONF 2>/dev/null`
-if [ -n "$HAS_LOADER" ]; then
-	echo "Upgrading noit.conf (removing lua loader)"
-	sed -ie '/<loader image="lua" name="lua">/,/<\/loader>/d' $CONF
-fi
-
-# adding credentials include d2b17c3
-if [ -z "`grep circonus-credentials.conf $CONF`" ]; then
-	echo "Upgrading noit.conf adding circonus-credentials.conf include"
-	rm -f $CONF.bak
-	cp $CONF $CONF.bak
-	$AWK '/<\/appliance>/{ print "      <include file=\"circonus-credentials.conf\" snippet=\"true\"/>";} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
-	rm -f $CONF.bak
-fi
-
-# move credentials around change d2b17c3
-O_USER=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/username' 2>/dev/null | grep '^0:' | cut -c4-`
-O_PASS=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/password' 2>/dev/null | grep '^0:' | cut -c4-`
-O_INSIDE=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/inside' 2>/dev/null | grep '^0:' | cut -c4-`
-O_URL=`$NOITD -u $USER -g $GROUP -x '/noit/circonus/appliance/circonus_url' 2>/dev/null | grep '^0:' | cut -c4-`
-if [ -n "$O_USER$O_PASS$O_INSIDE$O_URL" ]; then
-	echo "Copying credentials from noit.conf to circonus-credentials.conf"
-	cat << END_OF_CONF > /opt/noit/prod/etc/circonus-credentials.conf
-<?xml version="1.0" encoding="utf8"?>
-<credentials>
-$O_USER
-$O_PASS
-$O_INSIDE
-$O_URL
-</credentials>
-END_OF_CONF
-	echo "Removing credentials from noit.conf"
-	rm -f $CONF.bak
-	cp $CONF $CONF.bak
-	$AWK '/<appliance>/{IN=1} /(username|password|inside|circonus_url)/{if(IN==1){next;}} {print;}' $CONF.bak > $CONF || mv $CONF.bak $CONF
-	rm -f $CONF.bak
-fi
-
-# shatter checks and filtersets 91477334
-if [ -z "`grep '<checks .* backingstore=' $CONF`" ]; then
-	echo "Upgrading noit.conf to use backingstore for <checks>"
-	sed -ie 's#<checks max_initial_stutter="60000" filterset="default">#<checks max_initial_stutter="60000" filterset="default" backingstore="/opt/noit/prod/etc/checks">#;' $CONF
-fi
-if [ -n "`grep '^    <circonus>' $CONF`" ]; then
-	echo "Upgrading noit.conf to use backingstore for <filtersets/circonus>"
-	sed -ie 's#^    <circonus>#    <circonus backingstore="/opt/noit/prod/etc/filtersets">#;' $CONF
-fi
-
 test ! \( -f /opt/napp/etc/ssl/graphite.key -a -f /opt/napp/etc/ssl/graphite.crt -a -f /opt/napp/etc/ssl/graphite-ca.crt \)
 export SNI_GRAPHITE=$?
 
