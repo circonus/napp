@@ -60,9 +60,6 @@ function prov:new(attr)
     mtev.conf(CIRCONUS_API_TOKEN_CONF_PATH, tokenv)
   end
   local tok = mtev.conf_get_string(CIRCONUS_API_TOKEN_CONF_PATH)
-  if tok == nil then
-    error("Circonus Auth Token must be set, please set it and restart the broker")
-  end
   local apienv = os.getenv("CIRCONUS_API_URL")
   if apienv ~= nil then
     mtev.conf(CIRCONUS_API_URL_CONF_PATH, apienv)

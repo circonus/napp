@@ -129,10 +129,15 @@ function start_upkeep()
   local thread, tid = mtev.thread_self()
   if tid ~= 0 then return end
 
+  mtev.sleep(0) -- yield once to the eventer.
   broker = prov:new()
   if not broker:usable() then
-    mtev.log("error", "Missing sufficient configuration to start broker\n")
-    mtev.log("error", "Please follow setup/configuration instructions on setting up API auth tokens\n")
+    mtev.log("error", "**************\n")
+    mtev.log("error", "Missing CIRCONUS_API_TOKEN!\n")
+    mtev.log("error", "Please set it via:\n")
+    mtev.log("error", "\tprovtool config set api-token <uuid>\n")
+    mtev.log("error", "or setting CIRCONUS_AUTH_TOKEN=<uuid> in your evnironment\n")
+    mtev.log("error", "**************\n")
     os.exit(2)
   end
 
