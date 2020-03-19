@@ -10,6 +10,12 @@ WRITE_PATHS=" \
 	/opt/noit/prod/etc \
 "
 
+# Potentially move old SSL from /opt/napp/etc/ssl to /opt/noit/prod/etc/ssl
+if [ -d /opt/napp/etc/ssl ]; then
+	echo "Relocating SSL credentials"
+	(cd /opt/napp/etc && find ssl -print | cpio -pvd /opt/noit/prod/etc && rm -rf /opt/napp/etc)
+fi
+
 if [ -x /usr/gnu/bin/awk ]; then
 	AWK="/usr/gnu/bin/awk"
 else
