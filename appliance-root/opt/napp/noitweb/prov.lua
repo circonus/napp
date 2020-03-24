@@ -469,9 +469,13 @@ function prov:fetch_certificate(myself)
   local timeout = 0 
   local preamble = " -- attempting to fetch certificate for " .. cn
   repeat
-    if timeout > 0 then mtev.sleep(timeout) end
-    timeout = (timeout or 0.5) * 2
-    if timeout > 16 then timeout = 10 end
+    if timeout > 0 then
+      mtev.sleep(timeout)
+      timeout = timeout * 2
+    else
+      timeout = 0.5
+    end
+    if timeout > 10 then timeout = 10 end
     _, myself = self:get_broker(cn)
     if myself._cert ~= nil then
       local fd = mtev.open(pki.cert.file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), tonumber(0644,8))
