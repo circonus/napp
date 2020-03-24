@@ -638,7 +638,7 @@ function prov:provision(initial)
     local different = false
     for _, attr in ipairs({'noit_name', 'cluster_namme', 'ipdaddress',
       'latitude', 'longitude', 'contact_group_id', 'external_host', 'external_port',
-      'cluster_id', 'cluster_ip', 'prefer_reverse_connection'}) do
+      'cluster_id', 'cluster_ip', 'cluster_name', 'prefer_reverse_connection'}) do
       different = check_diff(attr)
       if different then break end
     end
