@@ -478,13 +478,8 @@ function prov:fetch_certificate(myself)
     if timeout > 10 then timeout = 10 end
     _, myself = self:get_broker(cn)
     if myself._cert ~= nil then
-      local fd = mtev.open(pki.cert.file, bit.bor(O_WRONLY,O_TRUNC,O_CREAT), tonumber(0644,8))
-      if fd < 0 then self:_F("%s - error\nCould not open %s for writing!\n", preamble, pki.cert.file) end
-      local len, error = mtev.write(fd, myself._cert)
-      mtev.close(fd)
-      if len ~= myself._cert:len() then
-        self:_F("%s - error.\nError writing to %s: %s\n", preamble, pki.cert.file, error or "unkown error")
-      end
+      local success, error = write_contents_if_changed(pki.cert.file, myself._cert)
+      if not success then self:_F("%s - error\nError writing to %s: %s!\n", preamble, pki.cert.file, error or "unkown error") end
     elseif myself.csr == nil then
       self:_P("%s - error no CSR posted, something is wrong.\n", preamble)
     else
