@@ -7,11 +7,15 @@ docker build -t circonus/broker .
 # Running
 
 ```
+docker volume create broker_config
+docker volume create broker_log
 docker run -d \
   --name circonus_broker
   --network host \
   -e CIRCONUS_AUTH_TOKEN=<token> \
   -e CLUSTER_NAME=<name> \
+  -v broker_config:/opt/noit/prod/etc \
+  -v broker_log:/opt/noit/prod/log \
   circonus/broker
 ```
 
@@ -19,16 +23,16 @@ docker run -d \
 
 ```
 docker stop circonus_broker
-docker rename circonus_broker oldbroker
+docker rm circonus_broker
 docker pull circonus/broker:latest
 docker run -d \
   --name circonus_broker
   --network host \
   -e CIRCONUS_AUTH_TOKEN=<token> \
   -e CLUSTER_NAME=<name> \
-  --volumes-from oldbroker \
+  -v broker_config:/opt/noit/prod/etc \
+  -v broker_log:/opt/noit/prod/log \
   circonus/broker:latest
-docker rm oldbroker
 ```
 
 # Online inspection
