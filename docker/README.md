@@ -1,7 +1,7 @@
 # Building
 
 ```
-docker compose -t circonus/broker .
+docker build -t circonus/broker .
 ```
 
 # Running
