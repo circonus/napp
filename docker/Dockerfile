@@ -12,7 +12,7 @@ RUN apt-get install -y telnet
 RUN echo "MANAGED_CORONER=1" >> /opt/noit/prod/etc/noit.env
 VOLUME ["/opt/noit/prod/etc", "/opt/noit/prod/log"]
 
-# These are default ports, you alsmost certainly want to run this
+# These are default ports, you almost certainly want to run this
 # image in host mode b/c the broker can open arbitrary ports during
 # runtime.
 
@@ -31,4 +31,3 @@ EXPOSE 8125/udp
 EXPOSE 8125/tcp
 
 CMD ["/opt/napp/bin/broker-start", "-D", "-D"]
-
