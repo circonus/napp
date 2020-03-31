@@ -7,9 +7,10 @@ RUN rm -f /tmp/circonus-apt.key
 COPY circonus.list /etc/apt/sources.list.d/circonus.list
 RUN apt-get update
 RUN apt-get install -y circonus-field-broker
-RUN apt-get install -y circonus-field-broker-crashreporter
+RUN apt-get install -y --allow-unauthenticated circonus-field-broker-crashreporter
 RUN apt-get install -y telnet
 RUN echo "MANAGED_CORONER=1" >> /opt/noit/prod/etc/noit.env
+VOLUME ["/opt/noit/prod/etc", "/opt/noit/prod/log"]
 
 # These are default ports, you alsmost certainly want to run this
 # image in host mode b/c the broker can open arbitrary ports during
