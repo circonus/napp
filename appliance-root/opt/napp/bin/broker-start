@@ -29,6 +29,16 @@ fi
 if [ -r /opt/noit/prod/etc/noit.local.env ]; then
 	. /opt/noit/prod/etc/noit.local.env
 fi
+
+# Detect if we have no process management and if coroner management
+# has not been explicitly set.  If this is the case, we should run
+# with coroner managed.
+if [ -z "$MANAGED_CORONER" ]; then
+	if [ "$$" -eq "1" -a -x "/opt/backtrace/bin/coroner" ]; then
+		MANAGED_CORONER=1
+	fi
+fi
+
 set +o allexport
 
 # Just in case, chown this stuff
