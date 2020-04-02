@@ -50,7 +50,7 @@ function prov:new(attr)
   obj._detail.set_latitude = os.getenv("BROKER_LATITUTE")
   obj._detail.set_longitude = os.getenv("BROKER_LONGITUTE")
   obj._detail.set_contact_group_id = os.getenv("CONTACT_GROUP")
-  obj._detail.set_make_public = os.getenv("MAKE_PUBLIC") or 0
+  obj._detail.set_make_public = os.getenv("MAKE_PUBLIC")
   for k,v in pairs(attr or {}) do
     obj[k] = v
   end
@@ -305,6 +305,7 @@ function prov:HTTP(method, url, payload, silent, _pp)
     if client.code ~= 200 then
       self:_E("An unknown error (%s) has occurred accessing: %s\n", client.code, url)
       self:_E("Please report this issue to support@circonus.com\n")
+      self:_E("%s\n", output)
     end
   end
 
@@ -596,10 +597,16 @@ function prov:provision(initial)
   --
   local myself
   if existing_cn ~= nil then
-    _, myself = self:get_broker(existing_cn)
-    if myself._status == 'unprovisioned' or pki.csr.data ~= myself.csr then
+    local code
+    code, myself = self:get_broker(existing_cn)
+    if code ~= 200 then
+      self:_F(" ** Perhaps you have the wrong auth token\n")
+    end
+    if myself._status == 'unprovisioned' or (initial and pki.csr.data ~= myself.csr) then
       -- We generated a CSR to provision ourselves, but they never got it
       self:_P(" ** incomplete provisioning, starting over...\n")
+      self:_F(" You must remove the CSR file to continue:\n  rm -f /opt/noit/prod/etc/ssl/appliance.csr\n")
+      os.exit(2)
       existing_cn = nil
     end
   end
