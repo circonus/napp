@@ -9,8 +9,11 @@ RUN chmod 755 /bin/console && \
     apt-get install -y circonus-field-broker && \
     apt-get install -y --allow-unauthenticated circonus-field-broker-crashreporter && \
     apt-get install -y telnet && \
+    mkdir /opt/napp/package && \
+    /opt/circonus/bin/curl -o /opt/napp/package/circonus-field-broker-core-stock.deb http://pilot.circonus.net/ubuntu/pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"xenial_"$4".deb"}'` && \
+    /usr/bin/dpkg -l circonus-field-broker-core | \
+      awk '/broker-core/{print $2"-"$3}' > /opt/noit/prod/etc/docker-core-version && \
     rm -rf /var/lib/apt/lists/*
-RUN echo "MANAGED_CORONER=1" >> /opt/noit/prod/etc/noit.env
 VOLUME ["/opt/noit/prod/etc", "/opt/noit/prod/log"]
 
 # These are default ports, you almost certainly want to run this
