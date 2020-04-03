@@ -1,11 +1,35 @@
 #!/bin/sh
 
+###
+# In docker we want so support /opt/noit/prod/etc as a volume
+# However, this means when we roll new docker images and people upgrade
+# the will not get the updated package config files.  While noone has
+# ever said anything nice about apt/dpkg, at least it knows which config
+# files are user-editable...  So, for the docker image we drop a copy of
+# the circonus-field-broker-core package we installed into
+#   /opt/napp/package/circonus-field-broker-core-stock.deb
+#
+# This might not be the same one that was installed when these volumes
+# were created, so we just go ahead and for install it again and it will
+# replace configs that we have configured that way.
+# It's a quick (subsecond) install.
+###
+if [ -r /opt/napp/package/circonus-field-broker-core-stock.deb ]; then
+  INSTALLED=`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3}'`
+  REMEMBERED=`cat /opt/noit/prod/etc/docker-core-version 2>/dev/null`
+  if [ "$INSTALLED" != "$REMEMBERED" ]; then
+    echo "Updating config files..."
+    /usr/bin/apt-get install --reinstall /opt/napp/package/circonus-field-broker-core-stock.deb
+    /usr/bin/dpkg -l circonus-field-broker-core | \
+      awk '/broker-core/{print $2"-"$3}' > /opt/noit/prod/etc/docker-core-version
+  fi
+fi
+
 NOITD=/opt/noit/prod/sbin/noitd
 CONF=/opt/noit/prod/etc/noit.conf
 USER=broker
 GROUP=broker
 WRITE_PATHS=" \
-	/opt/napp/etc/ssl \
 	/opt/noit/prod/log \
 	/opt/noit/prod/etc \
 "
