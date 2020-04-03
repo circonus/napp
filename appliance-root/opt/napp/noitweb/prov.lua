@@ -22,6 +22,7 @@ module("prov", package.seeall)
 
 local CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus_api_token"
 local CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
+local CIRCONUS_LEGACY_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_url"
 local HttpClient = require 'mtev.HttpClient'
 
 local debug = 0
@@ -67,6 +68,7 @@ function prov:new(attr)
   local api = mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
   obj.token = tok
   obj.url = api
+  obj.legacy = mtev.conf_get_string(CIRCONUS_LEGACY_URL_CONF_PATH) or "https://login.circonus.com"
   if obj._P == nil then obj._P = function(obj, ...) return _P(...) end end
   if obj._E == nil then obj._E = function(obj, ...) return _E(...) end end
   if obj._F == nil then obj._F = function(obj, ...) _F(...) return obj:exit(2) end end
@@ -237,8 +239,10 @@ function prov:HTTP(method, url, payload, silent, _pp)
   local in_headers = {}
 
   if string.sub(url, 1, string.len(self.url)) == self.url then
-    headers["X-Circonus-Auth-Token"] = self.token
-    headers["X-Circonus-App-Name"] = "broker-provision"
+    if self.token ~= nil then
+      headers["X-Circonus-Auth-Token"] = self.token
+      headers["X-Circonus-App-Name"] = "broker-provision"
+    end
   end
 
   if port == '' or port == nil then
@@ -350,7 +354,27 @@ function prov:find_broker(cn, flush)
   return nil
 end
 
+function prov:legacy_get_broker(cn)
+  -- old things won't die
+  local url = mtev.conf_get("//circonus/appliance//credentials/circonus_url") or self.url
+  url = url .. "/api/json/agent?cn=" .. mtev.extras.url_encode(cn)
+  local code, obj, raw = self:HTTP("GET", url)
+  if code ~= 200 or obj == nil then
+    self:_E("error fetching (legacy) broker info (%d):\n%s\n", code, string.sub(raw or "[no content]",1,1000))
+  else
+    -- legacy has this without an _
+    if obj.stratcons ~= nil then obj._stratcons, obj.stratcons = obj.stratcons, nil end
+    if obj.cert ~= nil then obj._cert, obj.cert = obj.cert, nil end
+  end
+  return code, obj, raw
+end
+
 function prov:get_broker(cn)
+  if self:cn() ~= nil and self.token == nil then
+    -- we have been provisioned (have a CSR) but not auth token
+    -- this was likely setup by hand and we should do our best to not explode
+    return self:legacy_get_broker(cn)
+  end
   return self:HTTP("GET", self:_API("/v2/provision_broker/" .. mtev.extras.url_encode(cn)))
 end
 
@@ -468,9 +492,11 @@ function prov:fetch_certificate(myself)
   local cn = myself and myself._cid or self:cn()
   local pki = self:pki_info()
   local timeout = 0 
+
   local preamble = " -- attempting to fetch certificate for " .. cn
   repeat
     if timeout > 0 then
+mtev.log("error", "Sleeping: %f\n", timeout)
       mtev.sleep(timeout)
       timeout = timeout * 2
     else
@@ -478,10 +504,10 @@ function prov:fetch_certificate(myself)
     end
     if timeout > 10 then timeout = 10 end
     _, myself = self:get_broker(cn)
-    if myself._cert ~= nil then
+    if myself ~= nil and myself._cert ~= nil then
       local success, error = write_contents_if_changed(pki.cert.file, myself._cert)
       if not success then self:_F("%s - error\nError writing to %s: %s!\n", preamble, pki.cert.file, error or "unkown error") end
-    elseif myself.csr == nil then
+    elseif myself ~= nil and myself.csr == nil then
       self:_P("%s - error no CSR posted, something is wrong.\n", preamble)
     else
       self:_P("%s - unavailable.\n", preamble)
@@ -490,13 +516,13 @@ function prov:fetch_certificate(myself)
   until pki.cert.exists
   self:_P("%s - ok.\n", preamble)
 
-  local update_pki_bits = function(url,name,file)
+  local update_pki_bits = function(url,name,file,transform)
     local preamble = " -- updating " .. name
     if file == nil then
       self:_D(1, "%s - %s skipped\n", preamble, name)
       return true
     end
-    local rv, error = self:fetch_url_to_file(url, file, tonumber(0644,8), extract_json_contents)
+    local rv, error = self:fetch_url_to_file(url, file, tonumber(0644,8), transform)
     if not rv then
       local body = mtev.parsejson(error)
       if body ~= nil then body = body:document() end
@@ -509,8 +535,14 @@ function prov:fetch_certificate(myself)
     return rv, error
   end
 
-  local rv = update_pki_bits(self.url .. "/pki/ca.crt", "CA", pki.ca.file)
-  local rv2 = update_pki_bits(self.url .. "/pki/ca.crl", "CRL", pki.crl.file)
+  local rv1, rv2
+  if self.token ~= nil then
+    rv1 = update_pki_bits(self.url .. "/pki/ca.crt", "CA", pki.ca.file, extract_json_contents)
+    rv2 = update_pki_bits(self.url .. "/pki/ca.crl", "CRL", pki.crl.file, extract_json_contents)
+  else
+    rv1 = update_pki_bits(self.legacy .. "/pki/ca.crt", "CA", pki.ca.file)
+    rv2 = update_pki_bits(self.legacy .. "/pki/ca.crl", "CRL", pki.crl.file)
+  end
   return rv and rv2
 end
 

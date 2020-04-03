@@ -12,12 +12,15 @@ local prov = require('prov')
 local broker
 local cached_broker_info
 
-function do_periodically(f, period)
+function do_periodically(f, _period, before)
+  local period = 0
+  if before then period = _period end
   return function()
     while true do
+      mtev.sleep(period)
       local rv, err = pcall(f)
       if not rv then mtev.log("error", "lua --> " .. err .. "\n") end
-      mtev.sleep(period)
+      period = _period
     end
   end
 end
@@ -131,7 +134,10 @@ function start_upkeep()
 
   mtev.sleep(0) -- yield once to the eventer.
   broker = prov:new()
-  if not broker:usable() then
+  local cn = broker:cn()
+  if broker:usable() then
+    broker:provision()
+  elseif cn == nil then
     mtev.log("error", "**************\n")
     mtev.log("error", "Missing CIRCONUS_API_TOKEN!\n")
     mtev.log("error", "Please set it via:\n")
@@ -139,12 +145,16 @@ function start_upkeep()
     mtev.log("error", "or setting CIRCONUS_AUTH_TOKEN=<uuid> in your evnironment\n")
     mtev.log("error", "**************\n")
     os.exit(2)
+  else
+    mtev.log("error", "**************\n")
+    mtev.log("error", "Booting in legacy mode, you are truly on your own.\n")
+    mtev.log("error", "Reinstalling via the documentation is highly recommended.\n")
+    mtev.log("error", "**************\n")
   end
 
-  broker:provision()
 
   -- Only do this in a single thread
   mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
   mtev.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
-  mtev.coroutine_spawn(do_periodically(function() broker:fetch_certificate() end, 3600))
+  mtev.coroutine_spawn(do_periodically(function() broker:fetch_certificate() end, 3600, true))
 end
