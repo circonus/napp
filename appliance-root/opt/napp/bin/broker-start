@@ -10,7 +10,7 @@
 #   /opt/napp/package/circonus-field-broker-core-stock.deb
 #
 # This might not be the same one that was installed when these volumes
-# were created, so we just go ahead and for install it again and it will
+# were created, so we just go ahead and force-install it again and it will
 # replace configs that we have configured that way.
 # It's a quick (subsecond) install.
 ###
