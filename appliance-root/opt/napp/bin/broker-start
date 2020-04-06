@@ -3,7 +3,7 @@
 ###
 # In docker we want so support /opt/noit/prod/etc as a volume
 # However, this means when we roll new docker images and people upgrade
-# the will not get the updated package config files.  While noone has
+# they will not get the updated package config files.  While no one has
 # ever said anything nice about apt/dpkg, at least it knows which config
 # files are user-editable...  So, for the docker image we drop a copy of
 # the circonus-field-broker-core package we installed into
