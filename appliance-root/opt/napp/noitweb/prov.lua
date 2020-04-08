@@ -356,7 +356,7 @@ end
 
 function prov:legacy_get_broker(cn)
   -- old things won't die
-  local url = mtev.conf_get("//circonus/appliance//credentials/circonus_url") or self.url
+  local url = mtev.conf_get("//circonus/appliance//credentials/circonus_url") or self.legacy
   url = url .. "/api/json/agent?cn=" .. mtev.extras.url_encode(cn)
   local code, obj, raw = self:HTTP("GET", url)
   if code ~= 200 or obj == nil then
