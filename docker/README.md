@@ -1,7 +1,10 @@
 # Building
 
 ```
-docker build -t circonus/broker .
+# for the latest version
+docker build -t circonuslabs/broker:latest --build-arg release=latest .
+# for the release version
+docker build -t circonuslabs/broker:release --build-arg release=release .
 ```
 
 # Running
