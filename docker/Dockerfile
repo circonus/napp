@@ -1,6 +1,7 @@
 FROM ubuntu:16.04
+ARG release=latest
 COPY console.sh /bin/console
-COPY circonus.list /etc/apt/sources.list.d/circonus.list
+COPY circonus.${release}.list /etc/apt/sources.list.d/circonus.list
 ADD https://keybase.io/circonuspkg/pgp_keys.asc?fingerprint=14ff6826503494d85e62d2f22dd15eba6d4fa648 /tmp/circonus-apt.key
 RUN chmod 755 /bin/console && \
     apt-key add /tmp/circonus-apt.key && \
@@ -10,7 +11,7 @@ RUN chmod 755 /bin/console && \
     apt-get install -y --allow-unauthenticated circonus-field-broker-crashreporter && \
     apt-get install -y telnet && \
     mkdir /opt/napp/package && \
-    /opt/circonus/bin/curl -o /opt/napp/package/circonus-field-broker-core-stock.deb http://pilot.circonus.net/ubuntu/pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"xenial_"$4".deb"}'` && \
+    /opt/circonus/bin/curl -o /opt/napp/package/circonus-field-broker-core-stock.deb `awk '{print $3; exit(0);}' /etc/apt/sources.list.d/circonus.list`pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"xenial_"$4".deb"}'` && \
     /usr/bin/dpkg -l circonus-field-broker-core | \
       awk '/broker-core/{print $2"-"$3}' > /opt/noit/prod/etc/docker-core-version && \
     rm -rf /var/lib/apt/lists/*
