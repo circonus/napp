@@ -925,7 +925,7 @@ function main()
   })
   local todo = parse_cli(p)
   if p.token == nil then
-    _F("Missing CIRCONUS_API_TOKEN!\nPlease set it via:\n\n%s config set api-token <uuid>\nor CIRCONUS_AUTH_TOKEN evnironmemnt variable\n", prog)
+    _F("Missing Circonus API token!\nPlease set it via:\n\n%s config set api-token <uuid>\nor CIRCONUS_AUTH_TOKEN evnironmemnt variable\n", prog)
   end
   if todo.command == "list" then do_task_list(p, _P) return os.exit(0)
   elseif todo.command == "provision" then return os.exit(p:provision(true))
