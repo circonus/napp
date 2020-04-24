@@ -139,10 +139,10 @@ function start_upkeep()
     broker:provision()
   elseif cn == nil then
     mtev.log("error", "**************\n")
-    mtev.log("error", "Missing CIRCONUS_API_TOKEN!\n")
+    mtev.log("error", "Missing Circonus API token!\n")
     mtev.log("error", "Please set it via:\n")
     mtev.log("error", "\tprovtool config set api-token <uuid>\n")
-    mtev.log("error", "or setting CIRCONUS_AUTH_TOKEN=<uuid> in your evnironment\n")
+    mtev.log("error", "or setting CIRCONUS_AUTH_TOKEN=<uuid> in your environment\n")
     mtev.log("error", "**************\n")
     os.exit(2)
   else
