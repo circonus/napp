@@ -19,7 +19,7 @@ docker run -d \
   -e CLUSTER_NAME=<name> \
   -v broker_config:/opt/noit/prod/etc \
   -v broker_log:/opt/noit/prod/log \
-  circonus/broker
+  circonuslabs/broker
 ```
 
 # Upgrading
@@ -27,7 +27,7 @@ docker run -d \
 ```
 docker stop circonus_broker
 docker rm circonus_broker
-docker pull circonus/broker:latest
+docker pull circonuslabs/broker:latest
 docker run -d \
   --name circonus_broker
   --network host \
@@ -35,7 +35,7 @@ docker run -d \
   -e CLUSTER_NAME=<name> \
   -v broker_config:/opt/noit/prod/etc \
   -v broker_log:/opt/noit/prod/log \
-  circonus/broker:latest
+  circonuslabs/broker:latest
 ```
 
 # Online inspection
