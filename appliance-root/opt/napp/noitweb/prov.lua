@@ -44,7 +44,7 @@ function prov:new(attr)
   end
   obj._detail.set_cluster_name = os.getenv("CLUSTER_NAME")
   local uts = mtev.uname() or {}
-  obj._detail.set_name = os.getenv("BROKER_NAME") or uts.nodename
+  obj._detail.set_noit_name = os.getenv("BROKER_NAME") or uts.nodename
   obj._detail.set_cluster_ip = os.getenv("CLUSTER_IP") or mtev.getip_ipv4()
   obj._detail.set_external_host = os.getenv("EXTERNAL_HOST") or mtev.getip_ipv4()
   obj._detail.set_external_port = os.getenv("EXTERNAL_PORT")
@@ -726,10 +726,10 @@ function prov:provision(initial)
   local existing_cn, csr_contents = self:extract_subject()
   existing_cn = attrs.cn
   code, myself = self:get_broker(existing_cn)
-  if set_name == nil then attrs.set_name = myself.name end
+  if attrs.set_noit_name == nil then attrs.set_noit_name = myself.noit_name end
 
   local code, obj, body = self:provision_broker(existing_cn, {
-    noit_name = attrs.set_name,
+    noit_name = attrs.set_noit_name,
     cluster_name = attrs.set_cluster_name,
     port = 43191,
     latitude = attrs.set_latitude,
@@ -894,7 +894,7 @@ function parse_cli(p, params)
     opts.ext_host = function(n) p:detail('set_external_host', n()) end
     opts.ext_port = function(n) p:detail('set_external_port', n()) end
     opts.ip = function(n) p:detail('set_ipaddress', n()) end
-    opts.name = function(n) p:detail('set_name', n()) end
+    opts.name = function(n) p:detail('set_noit_name', n()) end
     opts.lat = function(n) p:detail('set_latitude', n()) end
     opts.long = function(n) p:detail('set_longitude', n()) end
     opts.nat = function(n) p:detail('set_prefer_reverse_connection', 1) end
