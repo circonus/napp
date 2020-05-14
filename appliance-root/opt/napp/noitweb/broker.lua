@@ -154,7 +154,7 @@ function start_upkeep()
 
 
   -- Only do this in a single thread
-  mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800))
+  mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800, true))
   mtev.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
   mtev.coroutine_spawn(do_periodically(function() broker:fetch_certificate() end, 3600, true))
 end
