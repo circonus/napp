@@ -28,9 +28,13 @@ if [ "x$CERT" != "x" ]; then
     HOSTCN=`openssl x509 -in $CERT -subject | gawk -F'= ' '/^subject= (.+)/{print $2;}' | sed -e 's/.*CN=//g;' -e 's#/.*##g;'`
 fi
 
+# The following parameters are needed by the mtev-http-observer ptrace-module
+MOD_HTTP_OBSERVER_FLAGS="--load=/opt/circonus/libexec/mtev/http_observer.so --global lookup"
+
 /opt/backtrace/bin/ptrace --print --config=/opt/noit/prod/etc/ptrace.conf \
     --modules-path=/opt/circonus/share/ptrace \
     --kv=hostcn:$HOSTCN,location:$LOCATION,provider:$PROVIDER,environment:$ENVIRONMENT,trace_reason:$REASON \
     --kv=branch:$NOIT_BRANCH,version:$NOIT_VERSION,version_tstamp:$NOIT_VERSION_TSTAMP,buildmachine:$BUILD_NOIT_UNAME_N \
+    $MOD_HTTP_OBSERVER_FLAGS \
     $PID
 
