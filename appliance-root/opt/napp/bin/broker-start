@@ -47,9 +47,13 @@ else
 fi
 
 set -o allexport
+# File containing software build info
+# Do not modify this file.
 if [ -r /opt/noit/prod/etc/noit.env ]; then
 	. /opt/noit/prod/etc/noit.env
 fi
+
+# File containing site-specifc settings and overrides.
 if [ -r /opt/noit/prod/etc/noit.local.env ]; then
 	. /opt/noit/prod/etc/noit.local.env
 fi
