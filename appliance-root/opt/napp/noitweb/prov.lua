@@ -66,6 +66,7 @@ function prov:new(attr)
     mtev.conf(CIRCONUS_API_URL_CONF_PATH, apienv)
   end
   local api = mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
+  _P("Using API at %s\n", api)
   obj.token = tok
   obj.url = api
   obj.legacy = mtev.conf_get_string(CIRCONUS_LEGACY_URL_CONF_PATH) or "https://login.circonus.com"
@@ -357,6 +358,7 @@ end
 function prov:legacy_get_broker(cn)
   -- old things won't die
   local url = mtev.conf_get("//circonus/appliance//credentials/circonus_url") or self.legacy
+  self:_P("Using legacy API at %s\n", url)
   url = url .. "/api/json/agent?cn=" .. mtev.extras.url_encode(cn)
   local code, obj, raw = self:HTTP("GET", url)
   if code ~= 200 or obj == nil then
