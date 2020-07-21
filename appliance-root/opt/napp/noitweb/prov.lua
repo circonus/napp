@@ -78,7 +78,7 @@ end
 
 function prov:usable()
   if string.match(self.url,'^https?://') then
-    _P("Using API at %s\n", api)
+    _P("Using API at %s\n", self.url)
   else
     -- nil out the URL so broker.lua will exit out
     self.url = nil
