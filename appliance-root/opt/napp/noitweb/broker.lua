@@ -139,7 +139,7 @@ function start_upkeep()
     broker:provision()
   elseif broker.url == nil then
     mtev.log("error", "**************\n")
-    mtev.log("error", "CIRCONUS_API_URL must start with http:// or https:// and be a valid domain\n")
+    mtev.log("error", "CIRCONUS_API_URL must start with http:// or https:// and be a valid URL\n")
     mtev.log("error", "**************\n")
     os.exit(2)
   elseif cn == nil then
