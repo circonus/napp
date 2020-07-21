@@ -66,11 +66,6 @@ function prov:new(attr)
     mtev.conf(CIRCONUS_API_URL_CONF_PATH, apienv)
   end
   local api = mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
-  if string.match(api,'^https?://') then
-    _P("Using API at %s\n", api)
-  else
-    error("ERROR: API url does not start with http:// or https://\n")
-  end
   obj.token = tok
   obj.url = api
   obj.legacy = mtev.conf_get_string(CIRCONUS_LEGACY_URL_CONF_PATH) or "https://login.circonus.com"
@@ -78,6 +73,11 @@ function prov:new(attr)
   if obj._E == nil then obj._E = function(obj, ...) return _E(...) end end
   if obj._F == nil then obj._F = function(obj, ...) _F(...) return obj:exit(2) end end
   if obj._D == nil then obj._D = function(obj, ...) return _D(...) end end
+  if string.match(api,'^https?://') then
+    _P("Using API at %s\n", api)
+  else
+    obj:_F("CIRCONUS_API_URL_CONF_PATH must start with http:// or https://\n")
+  end
   return obj
 end
 
