@@ -73,15 +73,17 @@ function prov:new(attr)
   if obj._E == nil then obj._E = function(obj, ...) return _E(...) end end
   if obj._F == nil then obj._F = function(obj, ...) _F(...) return obj:exit(2) end end
   if obj._D == nil then obj._D = function(obj, ...) return _D(...) end end
-  if string.match(api,'^https?://') then
-    _P("Using API at %s\n", api)
-  else
-    obj:_F("CIRCONUS_API_URL must start with http:// or https://\n")
-  end
   return obj
 end
 
 function prov:usable()
+  if string.match(self.url,'^https?://') then
+    _P("Using API at %s\n", api)
+  else
+    -- nil out the URL so broker.lua will exit out
+    self.url = nil
+    return false
+  end
   if self.token == nil or self.url == nil then
     return false
   end
