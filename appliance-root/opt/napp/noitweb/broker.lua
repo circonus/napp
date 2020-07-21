@@ -137,6 +137,11 @@ function start_upkeep()
   local cn = broker:cn()
   if broker:usable() then
     broker:provision()
+  elseif broker.url == nil then
+    mtev.log("error", "**************\n")
+    mtev.log("error", "CIRCONUS_API_URL must start with http:// or https:// and be a valid URL\n")
+    mtev.log("error", "**************\n")
+    os.exit(2)
   elseif cn == nil then
     mtev.log("error", "**************\n")
     mtev.log("error", "Missing Circonus API token!\n")

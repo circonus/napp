@@ -66,7 +66,6 @@ function prov:new(attr)
     mtev.conf(CIRCONUS_API_URL_CONF_PATH, apienv)
   end
   local api = mtev.conf_get_string(CIRCONUS_API_URL_CONF_PATH) or "https://api.circonus.com"
-  _P("Using API at %s\n", api)
   obj.token = tok
   obj.url = api
   obj.legacy = mtev.conf_get_string(CIRCONUS_LEGACY_URL_CONF_PATH) or "https://login.circonus.com"
@@ -78,6 +77,13 @@ function prov:new(attr)
 end
 
 function prov:usable()
+  if string.match(self.url,'^https?://') then
+    _P("Using API at %s\n", self.url)
+  else
+    -- nil out the URL so broker.lua will exit out
+    self.url = nil
+    return false
+  end
   if self.token == nil or self.url == nil then
     return false
   end
