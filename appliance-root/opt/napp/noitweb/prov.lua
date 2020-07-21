@@ -76,7 +76,7 @@ function prov:new(attr)
   if string.match(api,'^https?://') then
     _P("Using API at %s\n", api)
   else
-    obj:_F("CIRCONUS_API_URL_CONF_PATH must start with http:// or https://\n")
+    obj:_F("CIRCONUS_API_URL must start with http:// or https://\n")
   end
   return obj
 end
