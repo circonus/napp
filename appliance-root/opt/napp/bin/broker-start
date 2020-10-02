@@ -29,6 +29,14 @@ NOITD=/opt/noit/prod/sbin/noitd
 CONF=/opt/noit/prod/etc/noit.conf
 USER=broker
 GROUP=broker
+
+NOIT_EXTERNAL_GROUP=nobody
+
+# Ubuntu is different
+if [[ -f /etc/lsb-release ]]; then
+    NOIT_EXTERNAL_GROUP=nogroup
+fi
+
 WRITE_PATHS=" \
 	/opt/noit/prod/log \
 	/opt/noit/prod/etc \
