@@ -47,6 +47,14 @@ else
 fi
 
 set -o allexport
+
+NOIT_EXTERNAL_GROUP=nobody
+
+# Ubuntu is different
+if [ -f /etc/lsb-release ]; then
+    NOIT_EXTERNAL_GROUP=nogroup
+fi
+
 # File containing software build info
 # Do not modify this file.
 if [ -r /opt/noit/prod/etc/noit.env ]; then
