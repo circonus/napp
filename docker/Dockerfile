@@ -1,17 +1,18 @@
-FROM ubuntu:16.04
-ARG release=latest
+FROM ubuntu:20.04
+ARG STYLE
+RUN apt-get update && apt-get install -y gnupg
 COPY console.sh /bin/console
-COPY circonus.${release}.list /etc/apt/sources.list.d/circonus.list
+COPY circonus.${STYLE}.list /etc/apt/sources.list.d/circonus.list
 ADD https://keybase.io/circonuspkg/pgp_keys.asc?fingerprint=14ff6826503494d85e62d2f22dd15eba6d4fa648 /tmp/circonus-apt.key
+ADD https://updates.circonus.net/backtrace/ubuntu/backtrace_package_signing.key /tmp/backtrace-apt.key
 RUN chmod 755 /bin/console && \
     apt-key add /tmp/circonus-apt.key && \
-    rm -f /tmp/circonus-apt.key && \
+    apt-key add /tmp/backtrace-apt.key && \
+    rm -f /tmp/*-apt.key && \
     apt-get update && \
-    apt-get install -y circonus-field-broker && \
-    apt-get install -y --allow-unauthenticated circonus-field-broker-crashreporter && \
-    apt-get install -y telnet && \
+    apt-get install -y circonus-field-broker circonus-field-broker-crashreporter telnet && \
     mkdir /opt/napp/package && \
-    /opt/circonus/bin/curl -o /opt/napp/package/circonus-field-broker-core-stock.deb `awk '{print $3; exit(0);}' /etc/apt/sources.list.d/circonus.list`pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"xenial_"$4".deb"}'` && \
+    /opt/circonus/bin/curl -s -o /opt/napp/package/circonus-field-broker-core-stock.deb `awk '{print $2; exit(0);}' /etc/apt/sources.list.d/circonus.list`pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"focal_"$4".deb"}'` && \
     /usr/bin/dpkg -l circonus-field-broker-core | \
       awk '/broker-core/{print $2"-"$3}' > /opt/noit/prod/etc/docker-core-version && \
     rm -rf /var/lib/apt/lists/*

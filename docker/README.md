@@ -2,9 +2,9 @@
 
 ```
 # for the latest version
-docker build -t circonuslabs/broker:latest --build-arg release=latest .
+docker build -t circonuslabs/broker:latest --build-arg STYLE=pilot .
 # for the release version
-docker build -t circonuslabs/broker:release --build-arg release=release .
+docker build -t circonuslabs/broker:release --build-arg STYLE=release .
 ```
 
 # Running
@@ -43,3 +43,5 @@ docker run -d \
 ```
 docker exec -it circonus_broker console
 ```
+
+See [Broker Troubleshooting](https://docs.circonus.com/circonus/administration/enterprise-brokers/#troubleshooting)
