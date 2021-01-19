@@ -2,29 +2,29 @@
 PID=$1
 REASON=$2
 
-if [ -r /opt/noit/prod/etc/noit.env ]; then
+if [[ -r /opt/noit/prod/etc/noit.env ]]; then
     . /opt/noit/prod/etc/noit.env
 fi
-if [ -r /opt/noit/prod/etc/noit.local.env ]; then
+if [[ -r /opt/noit/prod/etc/noit.local.env ]]; then
     . /opt/noit/prod/etc/noit.local.env
 fi
 
-if [ ! -x /opt/backtrace/bin/ptrace ]; then
+if [[ -n $DISABLE_CRASH_REPORTS || ! -x /opt/backtrace/bin/ptrace ]]; then
     echo "Process $PID has crashed."
     echo "Noit version: $NOIT_VERSION"
-    echo "No tracer installed."
+    echo "No tracer installed or crash reporting disabled."
     exit
 fi
 
 echo "Invoking tracer against $PID."
 
-if [ -r /opt/napp/etc/ssl/appliance.crt ]; then
+if [[ -r /opt/napp/etc/ssl/appliance.crt ]]; then
     CERT=/opt/napp/etc/ssl/appliance.crt
-elif [ -r /opt/noit/prod/etc/ssl/appliance.crt ] ; then
+elif [[ -r /opt/noit/prod/etc/ssl/appliance.crt ]] ; then
     CERT=/opt/noit/prod/etc/ssl/appliance.crt
 fi
 
-if [ "x$CERT" != "x" ]; then
+if [[ "x$CERT" != "x" ]]; then
     HOSTCN=`openssl x509 -in $CERT -subject | gawk -F'= ' '/^subject= (.+)/{print $2;}' | sed -e 's/.*CN=//g;' -e 's#/.*##g;'`
 fi
 
@@ -38,3 +38,6 @@ MOD_HTTP_OBSERVER_FLAGS="--load=/opt/circonus/libexec/mtev/http_observer.so --gl
     $MOD_HTTP_OBSERVER_FLAGS \
     $PID
 
+# Clean up unsent traces older than 7 days
+tracedir="/opt/noit/prod/traces"
+find $tracedir -type f -name '*.btt' -mtime +7 | xargs rm -f
