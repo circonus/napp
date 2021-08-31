@@ -127,6 +127,8 @@ function reverse_socket_maintain()
   end
 end
 
+local want_caql = mtev.conf_get_boolean('//caql/@enabled')
+
 function start_upkeep()
   -- protect against concurrent use
   local thread, tid = mtev.thread_self()
@@ -162,4 +164,9 @@ function start_upkeep()
   mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800, true))
   mtev.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
   mtev.coroutine_spawn(do_periodically(function() broker:fetch_certificate() end, 3600, true))
+
+  if want_caql then
+    local caqlmain = require('mainloop')
+    mtev.coroutine_spawn(caqlmain.start)
+  end
 end
