@@ -130,11 +130,18 @@ end
 local want_caql = mtev.conf_get_boolean('//caql/@enabled')
 
 function start_upkeep()
-  -- protect against concurrent use
   local thread, tid = mtev.thread_self()
-  if tid ~= 0 then return end
 
   mtev.sleep(0) -- yield once to the eventer.
+
+  if want_caql then
+    local caqlmain = require('mainloop')
+    mtev.coroutine_spawn(caqlmain.start)
+  end
+
+  -- protect against concurrent use
+  if tid ~= 0 then return end
+
   broker = prov:new()
   local cn = broker:cn()
   if broker:usable() then
@@ -164,9 +171,4 @@ function start_upkeep()
   mtev.coroutine_spawn(do_periodically(filtersets_maintain, 10800, true))
   mtev.coroutine_spawn(do_periodically(reverse_socket_maintain, 60))
   mtev.coroutine_spawn(do_periodically(function() broker:fetch_certificate() end, 3600, true))
-
-  if want_caql then
-    local caqlmain = require('mainloop')
-    mtev.coroutine_spawn(caqlmain.start)
-  end
 end
