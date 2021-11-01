@@ -134,7 +134,7 @@ function start_upkeep()
 
   mtev.sleep(0) -- yield once to the eventer.
 
-  if want_caql then
+  if want_caql and os.getenv("LOAD_CAQL") == "yes" then
     local caqlmain = require('mainloop')
     mtev.coroutine_spawn(caqlmain.start)
   end
