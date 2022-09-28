@@ -35,6 +35,7 @@ MOD_HTTP_OBSERVER_FLAGS="--load=/opt/circonus/libexec/mtev/http_observer.so --gl
     --modules-path=/opt/circonus/share/ptrace \
     --kv=hostcn:$HOSTCN,location:$LOCATION,provider:$PROVIDER,environment:$ENVIRONMENT,trace_reason:$REASON \
     --kv=branch:$NOIT_BRANCH,version:$NOIT_VERSION,version_tstamp:$NOIT_VERSION_TSTAMP,buildmachine:$BUILD_NOIT_UNAME_N \
+    --kv=mtev_version:$MTEV_VERSION \
     $MOD_HTTP_OBSERVER_FLAGS \
     $PID
 
