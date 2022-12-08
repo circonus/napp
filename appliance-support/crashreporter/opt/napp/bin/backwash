@@ -39,6 +39,26 @@ MOD_HTTP_OBSERVER_FLAGS="--load=/opt/circonus/libexec/mtev/http_observer.so --gl
     $MOD_HTTP_OBSERVER_FLAGS \
     $PID
 
-# Clean up unsent traces older than 7 days
+# Upload any ASAN logs, then remove them
+ASAN_URL='https://morgue.backtrace.io/circonus/b0474f5b8cdf9ecd81f94e5a921ddaa24296f5a76e49540f20c7faad93bc1631/sanitizers'
+QS="?application=broker&hostcn=$HOSTCN&location=$LOCATION&provider=$PROVIDER&environment=$ENVIRONMENT&branch=$NOIT_BRANCH&version=$NOIT_VERSION&version_tstamp=$NOIT_VERSION_TSTAMP&mtev_version=$MTEV_VERSION"
+
 tracedir="/opt/noit/prod/traces"
+asan_logs=(/opt/noit/prod/log/asan.log.*)
+if [[ -f "$asan_logs" ]]; then
+    echo "Found ${#asan_logs[@]} ASAN logs to upload"
+
+    for log in "${asan_logs[@]}"
+    do
+        HTTP_CODE=$(curl -s -o ${tracedir}/upload_${log}.trc --write-out "%{http_code}" --data-binary @$log "${ASAN_URL}${QS}")
+
+        # remove if upload was successful
+        if [[ ${HTTP_CODE} -ge 200 || ${HTTP_CODE} -lt 299 ]] ; then
+            rm -f $log
+        fi
+    done
+fi
+
+# Clean up unsent traces older than 7 days and trace output older than 14
 find $tracedir -type f -name '*.btt' -mtime +7 | xargs rm -f
+find $tracedir -type f -name '*.trc' -mtime +14 | xargs rm -f
