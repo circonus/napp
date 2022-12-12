@@ -483,7 +483,8 @@ function prov:generate_csr(cn,c,st,o)
   for k, v in string.gmatch(subject, "(%w+)=([^/]+)") do
     subj[k] = v
   end
-  local req = key:gencsr({ subject=subj })
+  local req = key:gencsr({ subject=subj,
+                           addext={subjectAltName={"DNS:"..cn}}})
 
   local fd = mtev.open(pki.csr.file,
                        bit.bor(O_CREAT,O_TRUNC,O_WRONLY), tonumber(0644,8))
