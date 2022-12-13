@@ -50,7 +50,9 @@ if [[ -f "$asan_logs" ]]; then
 
     for log in "${asan_logs[@]}"
     do
-        HTTP_CODE=$(curl -s -o ${tracedir}/upload_${log}.trc --write-out "%{http_code}" --data-binary @$log "${ASAN_URL}${QS}")
+        fn=$(basename $log)
+
+        HTTP_CODE=$(curl -s -o ${tracedir}/upload_${fn}.trc --write-out "%{http_code}" --data-binary @$log "${ASAN_URL}${QS}")
 
         # remove if upload was successful
         if [[ ${HTTP_CODE} -ge 200 || ${HTTP_CODE} -lt 299 ]] ; then
