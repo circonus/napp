@@ -24,6 +24,7 @@ local CIRCONUS_API_TOKEN_CONF_PATH = "//circonus/appliance//credentials/circonus
 local CIRCONUS_API_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_api_url"
 local CIRCONUS_LEGACY_URL_CONF_PATH = "//circonus/appliance//credentials/circonus_url"
 local HttpClient = require 'mtev.HttpClient'
+local json = require 'json'
 
 local debug = 0
 local _J = function(t) return mtev.tojson(t):tostring() end
@@ -31,6 +32,19 @@ function _P(...) mtev.log("error", ...) end
 function _E(...) mtev.log("error", ...) end
 local _F = function(...) mtev.log("error", "Fatal Error:\n\n") mtev.log("error", ...) end
 function _D(level, ...) if debug >= level then mtev.log("debug/cli", ...) end end
+
+function validate_uuid(uuid)
+  local x = "%x"
+  local t = { x:rep(8), x:rep(4), x:rep(4), x:rep(4), x:rep(12) }
+  local pattern = '^' .. table.concat(t, '%-') .. '$'
+  local result = string.match(uuid, pattern)
+
+  if result == nil then
+    return false, "Not a well-formed UUID: '" .. uuid .. "'"
+  else
+    return true, result
+  end
+end
 
 local prov = {}
 prov.__index = prov
@@ -85,6 +99,11 @@ function prov:usable()
     return false
   end
   if self.token == nil or self.url == nil then
+    return false
+  end
+  local valid_token, message = validate_uuid(self.token)
+  if not valid_token then
+    _P("%s\n", message)
     return false
   end
   return true
@@ -306,14 +325,22 @@ function prov:HTTP(method, url, payload, silent, _pp)
   if string.sub(url, 1, string.len(self.url)) == self.url then
     if client.code == 403 then
       _F("Permission denied! (bad CIRCONUS_AUTH_TOKEN?)\n")
-    end
-    if client.code == 401 then
-      mtev.log("error", "Looks like your token is pending validation.\n")
-      local tok_url = in_headers['x-circonus-token-approval-url']
-                  or 'the token management page'
-      self:_F("Please visit %s to approve its use here.\n", tok_url)
-    end
-    if client.code ~= 200 then
+      os.exit(2)
+    elseif client.code == 401 then
+      local response = json.decode(output)
+      if response.message:match("^invalid api application") then
+        mtev.log("error", "Looks like your token is pending validation.\n")
+        local tok_url = in_headers['x-circonus-token-approval-url']
+                    or 'the token management page'
+        self:_F("Please visit %s to approve its use.\n", tok_url)
+      elseif response.message:match("^invalid authentication token$") then
+        mtev.log("error", "The supplied token is invalid.\n")
+        self:_F("Please check that you have configured the correct token in CIRCONUS_AUTH_TOKEN.\n")
+      else
+        self:_F("Unauthorized request: %s\n", response.message)
+      end
+      os.exit(2)
+    elseif client.code ~= 200 then
       self:_E("An unknown error (%s) has occurred accessing: %s\n", client.code, url)
       self:_E("Please report this issue to support@circonus.com\n")
       self:_E("%s\n", output)
@@ -333,6 +360,7 @@ function prov:get_account()
   local code, obj = self:HTTP("GET", self:_API("/v2/account/current"))
   if not obj then
     _F("Could not retrieve account information. Is api-url set correctly?\n")
+    os.exit(2)
   end
   return obj
 end
@@ -515,7 +543,7 @@ mtev.log("error", "Sleeping: %f\n", timeout)
     _, myself = self:get_broker(cn)
     if myself ~= nil and myself._cert ~= nil then
       local success, error = write_contents_if_changed(pki.cert.file, myself._cert)
-      if not success then self:_F("%s - error\nError writing to %s: %s!\n", preamble, pki.cert.file, error or "unkown error") end
+      if not success then self:_F("%s - error\nError writing to %s: %s!\n", preamble, pki.cert.file, error or "unknown error") os.exit(2) end
     elseif myself ~= nil and myself.csr == nil then
       self:_P("%s - error no CSR posted, something is wrong.\n", preamble)
     else
@@ -818,12 +846,7 @@ configs['api-url'] = {
 }
 configs['api-token'] = {
   path = CIRCONUS_API_TOKEN_CONF_PATH,
-  validate = function(a)
-    if not string.find(a, "^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") then
-      return false, "must be a valid uuid"
-    end
-    return true
-  end,
+  validate = validate_uuid,
   description = "the Circonus API token for provisioning"
 }
 

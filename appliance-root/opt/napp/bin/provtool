@@ -2,9 +2,6 @@
 
 LUAMTEV=/opt/circonus/bin/luamtev
 CONF=/opt/noit/prod/etc/provtool.conf
-if test -r /opt/circonus/libexec/amd64/mtev/lua_mtev.so; then
-	CONF=/opt/noit/prod/etc/provtool64.conf
-fi
 USER=broker
 GROUP=broker
 HWLOC_HIDE_ERRORS=1
