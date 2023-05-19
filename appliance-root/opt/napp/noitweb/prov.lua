@@ -40,7 +40,7 @@ function validate_uuid(uuid)
   local result = string.match(uuid, pattern)
 
   if result == nil then
-    return false, "Not a well-formed UUID: " .. uuid
+    return false, "Not a well-formed UUID: '" .. uuid .. "'"
   else
     return true, result
   end
