@@ -53,6 +53,12 @@ NOIT_EXTERNAL_GROUP=nobody
 # Ubuntu is different
 if [ -f /etc/lsb-release ]; then
     NOIT_EXTERNAL_GROUP=nogroup
+
+    # If it exists, use our more recent C++ stdlib
+    if [ -r /opt/circonus/lib/libstdc++.so.6 ]; then
+      LD_PRELOAD="/opt/circonus/lib/libstdc++.so.6"
+      export LD_PRELOAD
+    fi
 fi
 
 # File containing software build info
