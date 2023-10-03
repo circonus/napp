@@ -756,7 +756,7 @@ function prov:provision(initial)
     return self:_F("We could not detemine your public IP address, please use -ip <ip>\n")
   end
   self:_P(" -- generating CSR...\n")
-  local rv, err = self:generate_csr(attrs.cn,account.country_code,'',account_name)
+  local rv, err = self:generate_csr(attrs.cn,account.country_code,'',account.name)
   if rv ~= 0 then
     return self:_F("Error creating certificate signing request:\n%s\n", err)
   end
