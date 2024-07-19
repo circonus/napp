@@ -6,7 +6,7 @@ COPY circonus.${STYLE}.list /etc/apt/sources.list.d/circonus.list
 ADD --chmod=644 https://keybase.io/circonuspkg/pgp_keys.asc?fingerprint=14ff6826503494d85e62d2f22dd15eba6d4fa648 /etc/apt/trusted.gpg.d/circonus.asc
 ADD --chmod=644 https://updates.circonus.net/backtrace/ubuntu/backtrace_package_signing.key /etc/apt/trusted.gpg.d/circonus-backtrace.asc
 RUN apt-get update && \
-    apt-get install -y circonus-field-broker circonus-field-broker-crashreporter telnet && \
+    apt-get install -y circonus-field-broker telnet && \
     mkdir /opt/napp/package && \
     /opt/circonus/bin/curl -s -o /opt/napp/package/circonus-field-broker-core-stock.deb `awk '{print $2; exit(0);}' /etc/apt/sources.list.d/circonus.list`pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"jammy_"$4".deb"}'` && \
     /usr/bin/dpkg -l circonus-field-broker-core | \
