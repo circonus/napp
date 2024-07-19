@@ -1,2 +1,2 @@
-deb http://updates.circonus.net/ubuntu/ focal main
-deb http://updates.circonus.net/backtrace/ubuntu/ focal main
+deb http://updates.circonus.net/ubuntu/ jammy main
+deb http://updates.circonus.net/backtrace/ubuntu/ jammy main
