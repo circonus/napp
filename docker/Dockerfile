@@ -1,12 +1,11 @@
 FROM ubuntu:22.04
 ARG STYLE
 RUN apt-get update && apt-get install -y gnupg
-COPY console.sh /bin/console
+COPY --chmod=755 console.sh /bin/console
 COPY circonus.${STYLE}.list /etc/apt/sources.list.d/circonus.list
-ADD https://keybase.io/circonuspkg/pgp_keys.asc?fingerprint=14ff6826503494d85e62d2f22dd15eba6d4fa648 /etc/apt/trusted.gpg.d/circonus.asc
-ADD https://updates.circonus.net/backtrace/ubuntu/backtrace_package_signing.key /etc/apt/trusted.gpg.d/circonus-backtrace.asc
-RUN chmod 755 /bin/console && \
-    apt-get update && \
+ADD --chmod=644 https://keybase.io/circonuspkg/pgp_keys.asc?fingerprint=14ff6826503494d85e62d2f22dd15eba6d4fa648 /etc/apt/trusted.gpg.d/circonus.asc
+ADD --chmod=644 https://updates.circonus.net/backtrace/ubuntu/backtrace_package_signing.key /etc/apt/trusted.gpg.d/circonus-backtrace.asc
+RUN apt-get update && \
     apt-get install -y circonus-field-broker circonus-field-broker-crashreporter telnet && \
     mkdir /opt/napp/package && \
     /opt/circonus/bin/curl -s -o /opt/napp/package/circonus-field-broker-core-stock.deb `awk '{print $2; exit(0);}' /etc/apt/sources.list.d/circonus.list`pool/main/c/circonus-field-broker-core/`dpkg -l circonus-field-broker-core | awk '/broker-core/{print $2"-"$3"jammy_"$4".deb"}'` && \
